@@ -1,0 +1,80 @@
+import type { Metadata, Viewport } from 'next';
+import { Inter, Playfair_Display } from 'next/font/google';
+import { Toaster } from 'react-hot-toast';
+import ThemeProvider from '../providers/ThemeProvider';
+import ReduxProvider from '../providers/ReduxProvider';
+import QueryProvider from '../providers/QueryProvider';
+import { SITE_NAME, SITE_URL } from '../constants';
+import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  display: 'swap',
+});
+
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — Premium Fashion Store`,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: 'Discover premium fashion, trending styles, and exclusive collections. Shop the latest in streetwear, co-ord sets, dresses, and more.',
+  keywords: ['fashion', 'clothing', 'streetwear', 'dresses', 'online shopping', 'premium fashion', 'trending'],
+  authors: [{ name: SITE_NAME }],
+  openGraph: {
+    type: 'website',
+    siteName: SITE_NAME,
+    locale: 'en_IN',
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: '#1a1a1a',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+      <body>
+        <ReduxProvider>
+          <QueryProvider>
+            <ThemeProvider>
+              {children}
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 3000,
+                  style: {
+                    background: '#1a1a1a',
+                    color: '#fff',
+                    fontSize: '0.875rem',
+                    fontFamily: 'Inter, sans-serif',
+                  },
+                  success: { iconTheme: { primary: '#c9a84c', secondary: '#fff' } },
+                }}
+              />
+            </ThemeProvider>
+          </QueryProvider>
+        </ReduxProvider>
+      </body>
+    </html>
+  );
+}

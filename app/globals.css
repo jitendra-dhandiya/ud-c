@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --font-inter: 'Inter', sans-serif;
+  --font-playfair: 'Playfair Display', serif;
+  --gold: #c9a84c;
+  --dark-gold: #a07c20;
+  --cream: #f8f4ef;
+  --charcoal: #2c2c2c;
+  --midnight: #0d0d0d;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-inter);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #fafafa;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+/* Image optimization */
+img { max-width: 100%; height: auto; }
+
+/* Selection */
+::selection { background: #1a1a1a; color: white; }
+
+/* Focus */
+:focus-visible { outline: 2px solid #c9a84c; outline-offset: 2px; }
+
+/* Swiper overrides */
+.swiper-pagination-bullet-active { background: #1a1a1a !important; }
+.swiper-button-next, .swiper-button-prev { color: #1a1a1a !important; }
+
+/* MUI overrides */
+.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline { border-color: #1a1a1a !important; }
+.MuiFormLabel-root.Mui-focused { color: #1a1a1a !important; }
+
+/* Animations */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in-up { animation: fadeInUp 0.5s ease forwards; }
+
+/* Mobile bottom nav safe area */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
+}
