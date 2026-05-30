@@ -4,14 +4,14 @@ import HeroSlider from '../../components/home/HeroSlider';
 import ProductSection from '../../components/home/ProductSection';
 import CategoryShowcase from '../../components/home/CategoryShowcase';
 import TestimonialsSection from '../../components/home/TestimonialsSection';
-import { SITE_NAME } from '../../constants';
+import { API_URL, SITE_NAME } from '../../constants';
 
 export const metadata: Metadata = {
   title: `${SITE_NAME} — Premium Fashion & Lifestyle`,
   description: 'Discover the latest trends in fashion. Shop premium clothing, co-ord sets, dresses, and streetwear at the best prices.',
 };
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+const API = API_URL || 'http://localhost:5000/api/v1';
 
 async function getHomepageData() {
   try {

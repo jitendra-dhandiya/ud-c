@@ -1,9 +1,9 @@
 import type { MetadataRoute } from 'next';
-import { SITE_URL } from '../constants';
+import { API_URL, SITE_URL } from '../constants';
 
 async function getProducts() {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+    const apiUrl = API_URL || 'http://localhost:5000/api/v1';
     const res = await fetch(`${apiUrl}/products?limit=500&page=1`, { next: { revalidate: 3600 } });
     const json = await res.json();
     return json.data || [];
@@ -12,7 +12,7 @@ async function getProducts() {
 
 async function getCategories() {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+    const apiUrl = API_URL || 'http://localhost:5000/api/v1';
     const res = await fetch(`${apiUrl}/categories`, { next: { revalidate: 3600 } });
     const json = await res.json();
     return json.data || [];
@@ -21,7 +21,7 @@ async function getCategories() {
 
 async function getBlogs() {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+    const apiUrl = API_URL || 'http://localhost:5000/api/v1';
     const res = await fetch(`${apiUrl}/blogs?limit=100`, { next: { revalidate: 3600 } });
     const json = await res.json();
     return json.data || [];

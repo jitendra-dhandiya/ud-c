@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import ProductDetailClient from '../../../../components/product/ProductDetailClient';
+import { API_URL } from '@/constants';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -8,7 +9,7 @@ interface Props {
 
 async function getProduct(slug: string) {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+    const apiUrl = API_URL;
     const res = await fetch(`${apiUrl}/products/${slug}`, { next: { revalidate: 120 } });
     if (!res.ok) return null;
     const json = await res.json();

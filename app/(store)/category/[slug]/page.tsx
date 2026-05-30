@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import CategoryPageClient from '../../../../components/category/CategoryPageClient';
-import { SITE_URL } from '../../../../constants';
+import { API_URL, SITE_URL } from '../../../../constants';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -10,7 +10,7 @@ interface Props {
 
 async function fetchCategory(slug: string) {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories/${slug}`, {
+    const res = await fetch(`${API_URL}/categories/${slug}`, {
       next: { revalidate: 3600 },
     });
     if (!res.ok) return null;

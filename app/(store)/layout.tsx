@@ -3,10 +3,11 @@ import Footer from '../../components/layout/Footer';
 import CartDrawer from '../../components/cart/CartDrawer';
 import MobileBottomNav from '../../components/layout/MobileBottomNav';
 import AuthInitializer from '../../components/common/AuthInitializer';
+import { API_URL } from '@/constants';
 
 async function getPublicSettings(): Promise<Record<string, string>> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+    const apiUrl =  API_URL || 'http://localhost:5000/api/v1';
     const res = await fetch(`${apiUrl}/settings/public`, { cache: 'no-store' });
     if (!res.ok) return {};
     const json = await res.json();

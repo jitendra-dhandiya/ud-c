@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import CollectionPageClient from '../../../../components/category/CollectionPageClient';
-import { SITE_URL } from '../../../../constants';
+import { API_URL, SITE_URL } from '../../../../constants';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -9,7 +9,7 @@ interface Props {
 
 async function fetchCollection(slug: string) {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/collections/${slug}`, {
+    const res = await fetch(`${API_URL}/collections/${slug}`, {
       next: { revalidate: 3600 },
     });
     if (!res.ok) return null;

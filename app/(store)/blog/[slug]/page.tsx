@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Box, Typography, Chip, Divider, Avatar } from '@mui/material';
 import { formatDate } from '../../../../utils/format';
-import { SITE_URL } from '../../../../constants';
+import { API_URL, SITE_URL } from '../../../../constants';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -10,7 +10,7 @@ interface Props {
 
 async function fetchBlog(slug: string) {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/blog/${slug}`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API_URL}/blog/${slug}`, { next: { revalidate: 3600 } });
     if (!res.ok) return null;
     return (await res.json()).data;
   } catch { return null; }

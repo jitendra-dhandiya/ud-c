@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Box, Typography, Container } from '@mui/material';
+import { API_URL } from '@/constants';
 
 interface Props {
   params: Promise<{ page: string }>;
@@ -8,7 +9,7 @@ interface Props {
 
 async function fetchCmsPage(slug: string) {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cms/${slug}`, {
+    const res = await fetch(`${API_URL}/cms/${slug}`, {
       next: { revalidate: 3600 },
     });
     if (!res.ok) return null;
