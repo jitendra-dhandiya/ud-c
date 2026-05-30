@@ -30,6 +30,9 @@ export const ORDER_STATUSES = {
   REFUNDED: { label: 'Refunded', color: 'default' as const },
 };
 
+
+
+
 export const PAYMENT_METHODS = [
   { value: 'COD', label: 'Cash on Delivery' },
   { value: 'RAZORPAY', label: 'Pay Online (Cards, UPI, Net Banking)' },
