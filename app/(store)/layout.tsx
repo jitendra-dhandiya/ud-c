@@ -7,8 +7,8 @@ import { API_URL } from '@/constants';
 
 async function getPublicSettings(): Promise<Record<string, string>> {
   try {
-    const apiUrl =  API_URL || 'http://localhost:5000/api/v1';
-    const res = await fetch(`${apiUrl}/settings/public`, { cache: 'no-store' });
+    const apiUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    const res = await fetch(`${apiUrl}/api/v1/settings/public`, { cache: 'no-store' });
     if (!res.ok) return {};
     const json = await res.json();
     return json.data || {};
