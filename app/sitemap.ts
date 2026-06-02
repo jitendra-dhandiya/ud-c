@@ -1,10 +1,18 @@
 import type { MetadataRoute } from 'next';
-import { API_URL, SITE_URL } from '../constants';
+import { SITE_URL } from '../constants';
+
+const BACKEND_API_URL = process.env.BACKEND_URL
+  ? `${process.env.BACKEND_URL}/api/v1`
+  : 'http://localhost:5000/api/v1';
+
+const FETCH_OPTS = {
+  next: { revalidate: 3600 },
+  signal: AbortSignal.timeout(8000),
+};
 
 async function getProducts() {
   try {
-    const apiUrl = API_URL || 'http://localhost:5000/api/v1';
-    const res = await fetch(`${apiUrl}/products?limit=500&page=1`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${BACKEND_API_URL}/products?limit=500&page=1`, FETCH_OPTS);
     const json = await res.json();
     return json.data || [];
   } catch { return []; }
@@ -12,8 +20,7 @@ async function getProducts() {
 
 async function getCategories() {
   try {
-    const apiUrl = API_URL || 'http://localhost:5000/api/v1';
-    const res = await fetch(`${apiUrl}/categories`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${BACKEND_API_URL}/categories`, FETCH_OPTS);
     const json = await res.json();
     return json.data || [];
   } catch { return []; }
@@ -21,8 +28,7 @@ async function getCategories() {
 
 async function getBlogs() {
   try {
-    const apiUrl = API_URL || 'http://localhost:5000/api/v1';
-    const res = await fetch(`${apiUrl}/blogs?limit=100`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${BACKEND_API_URL}/blogs?limit=100`, FETCH_OPTS);
     const json = await res.json();
     return json.data || [];
   } catch { return []; }
