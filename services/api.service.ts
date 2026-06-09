@@ -25,10 +25,14 @@ export const productApi = {
   getAll: (params?: Record<string, unknown>) => api.get('/products', { params }),
   getById: (id: string) => api.get(`/products/admin/${id}`),
   getBySlug: (slug: string) => api.get<{ data: Product }>(`/products/${slug}`),
-  getFeatured: (limit = 8) => api.get<{ data: Product[] }>('/products/featured', { params: { limit } }),
-  getTrending: (limit = 8) => api.get<{ data: Product[] }>('/products/trending', { params: { limit } }),
-  getNewArrivals: (limit = 8) => api.get<{ data: Product[] }>('/products/new-arrivals', { params: { limit } }),
-  getBestSellers: (limit = 8) => api.get<{ data: Product[] }>('/products/best-sellers', { params: { limit } }),
+  getFeatured: (opts?: { limit?: number; gender?: string | null }) =>
+    api.get<{ data: Product[] }>('/products/featured', { params: { limit: opts?.limit ?? 8, ...(opts?.gender ? { gender: opts.gender } : {}) } }),
+  getTrending: (opts?: { limit?: number; gender?: string | null }) =>
+    api.get<{ data: Product[] }>('/products/trending', { params: { limit: opts?.limit ?? 8, ...(opts?.gender ? { gender: opts.gender } : {}) } }),
+  getNewArrivals: (opts?: { limit?: number; gender?: string | null }) =>
+    api.get<{ data: Product[] }>('/products/new-arrivals', { params: { limit: opts?.limit ?? 8, ...(opts?.gender ? { gender: opts.gender } : {}) } }),
+  getBestSellers: (opts?: { limit?: number; gender?: string | null }) =>
+    api.get<{ data: Product[] }>('/products/best-sellers', { params: { limit: opts?.limit ?? 8, ...(opts?.gender ? { gender: opts.gender } : {}) } }),
   search: (params: Record<string, unknown>) => api.get('/products/search', { params }),
   create: (data: FormData) => api.post('/products', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   update: (id: string, data: FormData) => api.put(`/products/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
@@ -226,6 +230,12 @@ export const collectionApi = {
     return api.put(`/collections/${id}`, data, isForm ? { headers: { 'Content-Type': 'multipart/form-data' } } : {});
   },
   delete: (id: string) => api.delete(`/collections/${id}`),
+  getProducts: (id: string, params?: Record<string, unknown>) =>
+    api.get(`/collections/${id}/products`, { params }),
+  addProduct: (id: string, productId: string) =>
+    api.post(`/collections/${id}/products`, { productId }),
+  removeProduct: (id: string, productId: string) =>
+    api.delete(`/collections/${id}/products/${productId}`),
 };
 
 // ─── Media ────────────────────────────────────────────────────

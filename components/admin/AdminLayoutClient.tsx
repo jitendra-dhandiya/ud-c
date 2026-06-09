@@ -41,7 +41,6 @@ const NAV_ITEMS = [
       { label: 'Homepage Builder', href: '/admin/homepage' },
       { label: 'Banners', href: '/admin/banners' },
       { label: 'Blogs', href: '/admin/blogs' },
-      { label: 'CMS Pages', href: '/admin/cms' },
     ],
   },
   { label: 'Coupons', icon: <LocalOffer fontSize="small" />, href: '/admin/coupons' },
@@ -54,7 +53,6 @@ const NAV_ITEMS = [
     children: [
       { label: 'SEO', href: '/admin/seo' },
       { label: 'Settings', href: '/admin/settings' },
-      { label: 'Users & Roles', href: '/admin/roles' },
     ],
   },
 ];

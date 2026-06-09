@@ -3,6 +3,7 @@ import Footer from '../../components/layout/Footer';
 import CartDrawer from '../../components/cart/CartDrawer';
 import MobileBottomNav from '../../components/layout/MobileBottomNav';
 import AuthInitializer from '../../components/common/AuthInitializer';
+import GenderInitializer from '../../components/common/GenderInitializer';
 import { API_URL } from '@/constants';
 
 async function getPublicSettings(): Promise<Record<string, string>> {
@@ -23,6 +24,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   return (
     <>
       <AuthInitializer />
+      <GenderInitializer />
       <Navbar settings={settings} />
       <main style={{ minHeight: '70vh' }}>{children}</main>
       <Footer settings={settings} />

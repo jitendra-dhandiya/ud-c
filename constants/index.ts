@@ -6,6 +6,12 @@ console.log("🚀 ~ API_URL:", API_URL)
 export const CURRENCY = process.env.NEXT_PUBLIC_DEFAULT_CURRENCY || 'INR';
 export const CURRENCY_SYMBOL = process.env.NEXT_PUBLIC_DEFAULT_CURRENCY_SYMBOL || '₹';
 
+export const GENDERS = [
+  { value: 'MEN', label: 'Men' },
+  { value: 'WOMEN', label: 'Women' },
+  { value: 'UNISEX', label: 'Unisex' },
+];
+
 export const PRODUCT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Free Size'];
 export const PRODUCT_COLORS = ['Black', 'White', 'Navy', 'Grey', 'Beige', 'Brown', 'Green', 'Blue', 'Red', 'Pink', 'Yellow', 'Orange', 'Purple'];
 

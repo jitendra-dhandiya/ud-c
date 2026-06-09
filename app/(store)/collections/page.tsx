@@ -1,0 +1,310 @@
+'use client';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import {
+  Box, Container, Typography, Grid, Card, CardMedia, CardContent,
+  Skeleton, Chip, Button,
+} from '@mui/material';
+import { ArrowForward } from '@mui/icons-material';
+import { motion } from 'framer-motion';
+import { collectionApi } from '../../../services/api.service';
+
+interface Collection {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  image?: string;
+  isFeatured: boolean;
+  _count?: { products: number };
+}
+
+function CollectionCardSkeleton() {
+  return (
+    <Card elevation={0} sx={{ borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+      <Skeleton variant="rectangular" height={260} />
+      <CardContent sx={{ p: 2.5 }}>
+        <Skeleton width="60%" height={28} />
+        <Skeleton width="90%" height={20} sx={{ mt: 1 }} />
+        <Skeleton width="40%" height={36} sx={{ mt: 1.5 }} />
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function CollectionsPage() {
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    collectionApi.getAll({ limit: 50, sortBy: 'sortOrder' })
+      .then(({ data }) => setCollections((data as any).data || []))
+      .catch(() => setCollections([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const featured = collections.filter(c => c.isFeatured);
+  const rest = collections.filter(c => !c.isFeatured);
+
+  return (
+    <Box sx={{ pb: { xs: 8, md: 6 } }}>
+      {/* Hero */}
+      <Box
+        sx={{
+          bgcolor: '#1a1a1a',
+          color: 'white',
+          py: { xs: 6, md: 9 },
+          textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          sx={{
+            position: 'absolute', inset: 0, opacity: 0.06,
+            backgroundImage: 'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)',
+            backgroundSize: '12px 12px',
+          }}
+        />
+        <Container maxWidth="md" sx={{ position: 'relative' }}>
+          <Typography
+            variant="overline"
+            sx={{ letterSpacing: '0.25em', color: '#c9a84c', fontWeight: 600, display: 'block', mb: 1 }}
+          >
+            Curated For You
+          </Typography>
+          <Typography
+            variant="h3"
+            sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 700, mb: 2 }}
+          >
+            Our Collections
+          </Typography>
+          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.7)', maxWidth: 480, mx: 'auto' }}>
+            Explore our carefully curated collections — each one a story told through fabric, colour, and style.
+          </Typography>
+        </Container>
+      </Box>
+
+      <Container maxWidth="xl" sx={{ pt: { xs: 5, md: 7 } }}>
+
+        {/* Featured collections — large cards */}
+        {(loading || featured.length > 0) && (
+          <Box sx={{ mb: { xs: 5, md: 7 } }}>
+            <Typography
+              variant="h5"
+              sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 700, mb: 3 }}
+            >
+              Featured Collections
+            </Typography>
+
+            <Grid container spacing={3}>
+              {loading
+                ? [0, 1].map(i => (
+                  <Grid item xs={12} sm={6} key={i}>
+                    <CollectionCardSkeleton />
+                  </Grid>
+                ))
+                : featured.map((col, i) => (
+                  <Grid item xs={12} sm={6} key={col.id}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                    >
+                      <Link href={`/collections/${col.slug}`} style={{ textDecoration: 'none' }}>
+                        <Card
+                          elevation={0}
+                          sx={{
+                            borderRadius: 2, overflow: 'hidden',
+                            border: '1px solid', borderColor: 'divider',
+                            cursor: 'pointer',
+                            '&:hover .col-img': { transform: 'scale(1.05)' },
+                            '&:hover .col-arrow': { transform: 'translateX(4px)' },
+                          }}
+                        >
+                          <Box sx={{ overflow: 'hidden', height: 320, position: 'relative' }}>
+                            {col.image ? (
+                              <CardMedia
+                                className="col-img"
+                                component="img"
+                                image={col.image}
+                                alt={col.name}
+                                sx={{ height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+                              />
+                            ) : (
+                              <Box
+                                className="col-img"
+                                sx={{
+                                  height: '100%',
+                                  background: 'linear-gradient(135deg, #f5f0eb 0%, #e8ddd4 100%)',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  transition: 'transform 0.5s ease',
+                                }}
+                              >
+                                <Typography
+                                  sx={{ fontFamily: 'var(--font-playfair)', fontSize: '3rem', color: '#c9a84c', opacity: 0.4 }}
+                                >
+                                  {col.name.charAt(0)}
+                                </Typography>
+                              </Box>
+                            )}
+                            <Chip
+                              label="Featured"
+                              size="small"
+                              sx={{
+                                position: 'absolute', top: 12, left: 12,
+                                bgcolor: '#c9a84c', color: 'white', fontWeight: 600,
+                                fontSize: '0.65rem', letterSpacing: '0.06em',
+                              }}
+                            />
+                            {col._count?.products != null && (
+                              <Chip
+                                label={`${col._count.products} items`}
+                                size="small"
+                                sx={{
+                                  position: 'absolute', top: 12, right: 12,
+                                  bgcolor: 'rgba(0,0,0,0.55)', color: 'white',
+                                  backdropFilter: 'blur(4px)', fontSize: '0.7rem',
+                                }}
+                              />
+                            )}
+                          </Box>
+                          <CardContent sx={{ p: 2.5 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <Box>
+                                <Typography variant="h6" fontWeight={700} sx={{ color: '#1a1a1a' }}>
+                                  {col.name}
+                                </Typography>
+                                {col.description && (
+                                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }} noWrap>
+                                    {col.description}
+                                  </Typography>
+                                )}
+                              </Box>
+                              <ArrowForward
+                                className="col-arrow"
+                                sx={{ color: '#1a1a1a', transition: 'transform 0.2s', flexShrink: 0, mt: 0.5 }}
+                              />
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    </motion.div>
+                  </Grid>
+                ))}
+            </Grid>
+          </Box>
+        )}
+
+        {/* All other collections — smaller grid */}
+        {(loading || rest.length > 0) && (
+          <Box>
+            {featured.length > 0 && (
+              <Typography
+                variant="h5"
+                sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 700, mb: 3 }}
+              >
+                All Collections
+              </Typography>
+            )}
+
+            <Grid container spacing={2.5}>
+              {loading
+                ? [0, 1, 2, 3, 4, 5].map(i => (
+                  <Grid item xs={6} sm={4} md={3} key={i}>
+                    <CollectionCardSkeleton />
+                  </Grid>
+                ))
+                : (featured.length === 0 ? collections : rest).map((col, i) => (
+                  <Grid item xs={6} sm={4} md={3} key={col.id}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.06 }}
+                    >
+                      <Link href={`/collections/${col.slug}`} style={{ textDecoration: 'none' }}>
+                        <Card
+                          elevation={0}
+                          sx={{
+                            borderRadius: 2, overflow: 'hidden',
+                            border: '1px solid', borderColor: 'divider',
+                            cursor: 'pointer',
+                            transition: 'box-shadow 0.2s, transform 0.2s',
+                            '&:hover': { boxShadow: 4, transform: 'translateY(-3px)' },
+                            '&:hover .col-img': { transform: 'scale(1.06)' },
+                          }}
+                        >
+                          <Box sx={{ overflow: 'hidden', height: 200, position: 'relative' }}>
+                            {col.image ? (
+                              <CardMedia
+                                className="col-img"
+                                component="img"
+                                image={col.image}
+                                alt={col.name}
+                                sx={{ height: '100%', objectFit: 'cover', transition: 'transform 0.45s ease' }}
+                              />
+                            ) : (
+                              <Box
+                                className="col-img"
+                                sx={{
+                                  height: '100%',
+                                  background: 'linear-gradient(135deg, #f5f0eb 0%, #e8ddd4 100%)',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  transition: 'transform 0.45s ease',
+                                }}
+                              >
+                                <Typography
+                                  sx={{ fontFamily: 'var(--font-playfair)', fontSize: '2.5rem', color: '#c9a84c', opacity: 0.4 }}
+                                >
+                                  {col.name.charAt(0)}
+                                </Typography>
+                              </Box>
+                            )}
+                            {col._count?.products != null && (
+                              <Chip
+                                label={`${col._count.products} items`}
+                                size="small"
+                                sx={{
+                                  position: 'absolute', bottom: 8, right: 8,
+                                  bgcolor: 'rgba(0,0,0,0.55)', color: 'white',
+                                  backdropFilter: 'blur(4px)', fontSize: '0.65rem',
+                                }}
+                              />
+                            )}
+                          </Box>
+                          <CardContent sx={{ p: 2 }}>
+                            <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#1a1a1a' }} noWrap>
+                              {col.name}
+                            </Typography>
+                            {col.description && (
+                              <Typography variant="caption" color="text.secondary" noWrap display="block">
+                                {col.description}
+                              </Typography>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    </motion.div>
+                  </Grid>
+                ))}
+            </Grid>
+          </Box>
+        )}
+
+        {/* Empty state */}
+        {!loading && collections.length === 0 && (
+          <Box sx={{ textAlign: 'center', py: 12 }}>
+            <Typography variant="h6" sx={{ mb: 1 }}>No collections yet</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Check back soon — new collections are on their way.
+            </Typography>
+            <Button component={Link} href="/shop" variant="outlined" sx={{ borderColor: '#1a1a1a', color: '#1a1a1a' }}>
+              Browse All Products
+            </Button>
+          </Box>
+        )}
+
+      </Container>
+    </Box>
+  );
+}

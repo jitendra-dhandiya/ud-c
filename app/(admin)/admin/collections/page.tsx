@@ -1,19 +1,243 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Box, Typography, Button, Card, CardContent, Avatar, Chip, IconButton,
   Stack, Skeleton, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, FormControlLabel, Switch, TablePagination, InputAdornment,
+  Divider, List, ListItem, ListItemAvatar, ListItemText, CircularProgress,
+  Tooltip,
 } from '@mui/material';
-import { Add, Edit, Delete, Search } from '@mui/icons-material';
+import { Add, Edit, Delete, Search, Inventory2, Remove, Close } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { collectionApi } from '../../../../services/api.service';
+import { collectionApi, productApi } from '../../../../services/api.service';
 import { toast } from 'react-hot-toast';
 
 const PAGE_SIZE = 20;
 const schema = Yup.object({ name: Yup.string().required('Name required'), description: Yup.string() });
 
+// ── Manage Products Dialog ─────────────────────────────────────────────────────
+function ManageProductsDialog({
+  collection,
+  open,
+  onClose,
+}: {
+  collection: any;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [colProducts, setColProducts] = useState<any[]>([]);
+  const [colLoading, setColLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const loadCollectionProducts = useCallback(async () => {
+    if (!collection) return;
+    setColLoading(true);
+    try {
+      const { data } = await collectionApi.getProducts(collection.id, { limit: 100 });
+      setColProducts((data as any).data || []);
+    } catch { setColProducts([]); }
+    finally { setColLoading(false); }
+  }, [collection]);
+
+  useEffect(() => {
+    if (open && collection) {
+      loadCollectionProducts();
+      setSearchQuery('');
+      setSearchResults([]);
+    }
+  }, [open, collection, loadCollectionProducts]);
+
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (searchQuery.trim().length < 2) { setSearchResults([]); return; }
+    setSearchLoading(true);
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const { data } = await productApi.getAll({ search: searchQuery.trim(), limit: 10 });
+        const results = (data as any).data || [];
+        const colIds = new Set(colProducts.map((p: any) => p.id));
+        setSearchResults(results.filter((p: any) => !colIds.has(p.id)));
+      } catch { setSearchResults([]); }
+      finally { setSearchLoading(false); }
+    }, 350);
+  }, [searchQuery, colProducts]);
+
+  const handleAdd = async (product: any) => {
+    setAddingId(product.id);
+    try {
+      await collectionApi.addProduct(collection.id, product.id);
+      toast.success(`"${product.name}" added`);
+      await loadCollectionProducts();
+      setSearchResults(prev => prev.filter(p => p.id !== product.id));
+    } catch { toast.error('Failed to add product'); }
+    finally { setAddingId(null); }
+  };
+
+  const handleRemove = async (product: any) => {
+    setRemovingId(product.id);
+    try {
+      await collectionApi.removeProduct(collection.id, product.id);
+      toast.success(`"${product.name}" removed`);
+      setColProducts(prev => prev.filter(p => p.id !== product.id));
+    } catch { toast.error('Failed to remove product'); }
+    finally { setRemovingId(null); }
+  };
+
+  if (!collection) return null;
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+        <Box>
+          <Typography variant="h6" fontWeight={700}>{collection.name}</Typography>
+          <Typography variant="caption" color="text.secondary">Manage products in this collection</Typography>
+        </Box>
+        <IconButton size="small" onClick={onClose}><Close fontSize="small" /></IconButton>
+      </DialogTitle>
+
+      <DialogContent sx={{ p: 0 }}>
+        {/* Search to add */}
+        <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>Add Products</Typography>
+          <TextField
+            size="small" fullWidth
+            placeholder="Search by product name..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment>,
+              endAdornment: searchLoading ? <CircularProgress size={14} /> : null,
+            }}
+          />
+
+          {searchResults.length > 0 && (
+            <Box sx={{ mt: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, maxHeight: 200, overflow: 'auto' }}>
+              {searchResults.map(p => (
+                <Box
+                  key={p.id}
+                  sx={{
+                    display: 'flex', alignItems: 'center', gap: 1.5, px: 1.5, py: 1,
+                    borderBottom: '1px solid', borderColor: 'divider',
+                    '&:last-child': { borderBottom: 'none' },
+                  }}
+                >
+                  <Avatar
+                    src={p.images?.[0]?.url}
+                    variant="rounded"
+                    sx={{ width: 36, height: 44, bgcolor: '#f5f5f5', flexShrink: 0 }}
+                  />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="caption" fontWeight={600} noWrap display="block">{p.name}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      ₹{p.salePrice || p.basePrice}
+                      {p.category?.name && ` · ${p.category.name}`}
+                    </Typography>
+                  </Box>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    disabled={addingId === p.id}
+                    onClick={() => handleAdd(p)}
+                    sx={{ bgcolor: '#1a1a1a', '&:hover': { bgcolor: '#333' }, flexShrink: 0, minWidth: 56 }}
+                  >
+                    {addingId === p.id ? <CircularProgress size={14} sx={{ color: 'white' }} /> : 'Add'}
+                  </Button>
+                </Box>
+              ))}
+            </Box>
+          )}
+
+          {searchQuery.trim().length >= 2 && !searchLoading && searchResults.length === 0 && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              No products found or all matching products are already in this collection.
+            </Typography>
+          )}
+        </Box>
+
+        {/* Current products */}
+        <Box sx={{ px: 3, py: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+            <Typography variant="subtitle2" fontWeight={700}>
+              In this collection
+            </Typography>
+            <Chip label={colProducts.length} size="small" sx={{ bgcolor: '#f0f0f0', fontWeight: 700 }} />
+          </Box>
+
+          {colLoading ? (
+            <Stack spacing={1}>
+              {[0, 1, 2].map(i => <Skeleton key={i} height={56} sx={{ borderRadius: 1 }} />)}
+            </Stack>
+          ) : colProducts.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Inventory2 sx={{ fontSize: 36, color: '#ddd', mb: 1 }} />
+              <Typography variant="body2" color="text.secondary">
+                No products yet. Search above to add some.
+              </Typography>
+            </Box>
+          ) : (
+            <Stack spacing={0.75} sx={{ maxHeight: 320, overflow: 'auto' }}>
+              {colProducts.map(p => (
+                <Box
+                  key={p.id}
+                  sx={{
+                    display: 'flex', alignItems: 'center', gap: 1.5,
+                    px: 1.5, py: 1, borderRadius: 1,
+                    border: '1px solid', borderColor: 'divider',
+                    bgcolor: '#fafafa',
+                  }}
+                >
+                  <Avatar
+                    src={p.images?.[0]?.url}
+                    variant="rounded"
+                    sx={{ width: 36, height: 44, bgcolor: '#f5f5f5', flexShrink: 0 }}
+                  />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="caption" fontWeight={600} noWrap display="block">{p.name}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      ₹{p.salePrice || p.basePrice}
+                      {p.category?.name && ` · ${p.category.name}`}
+                    </Typography>
+                  </Box>
+                  <Chip
+                    label={p.isActive ? 'Active' : 'Inactive'}
+                    size="small"
+                    color={p.isActive ? 'success' : 'default'}
+                    sx={{ fontSize: '0.6rem', height: 18, flexShrink: 0 }}
+                  />
+                  <Tooltip title="Remove from collection">
+                    <IconButton
+                      size="small"
+                      color="error"
+                      disabled={removingId === p.id}
+                      onClick={() => handleRemove(p)}
+                    >
+                      {removingId === p.id
+                        ? <CircularProgress size={14} color="error" />
+                        : <Remove fontSize="small" />}
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              ))}
+            </Stack>
+          )}
+        </Box>
+      </DialogContent>
+
+      <Divider />
+      <DialogActions sx={{ px: 3, py: 1.5 }}>
+        <Button onClick={onClose} sx={{ color: 'text.secondary' }}>Done</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ── Main page ──────────────────────────────────────────────────────────────────
 export default function CollectionsPage() {
   const [collections, setCollections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +248,7 @@ export default function CollectionsPage() {
   const [editCol, setEditCol] = useState<any>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
+  const [manageCol, setManageCol] = useState<any>(null);
 
   const fetchCollections = useCallback(() => {
     setLoading(true);
@@ -77,7 +302,7 @@ export default function CollectionsPage() {
   const closeDialog = () => { setDialogOpen(false); setEditCol(null); formik.resetForm(); };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this collection?')) return;
+    if (!confirm('Delete this collection? Products will not be deleted.')) return;
     try {
       await collectionApi.delete(id);
       toast.success('Deleted');
@@ -115,9 +340,20 @@ export default function CollectionsPage() {
                       Slug: /{c.slug} · {c._count?.products ?? 0} products
                     </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     {c.isFeatured && <Chip label="Featured" size="small" color="secondary" sx={{ height: 20, fontSize: '0.6rem' }} />}
                     <Chip label={c.isActive ? 'Active' : 'Inactive'} size="small" color={c.isActive ? 'success' : 'default'} />
+                    <Tooltip title="Manage Products">
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<Inventory2 fontSize="small" />}
+                        onClick={() => setManageCol(c)}
+                        sx={{ borderColor: '#1a1a1a', color: '#1a1a1a', fontSize: '0.7rem', px: 1.5 }}
+                      >
+                        Products ({c._count?.products ?? 0})
+                      </Button>
+                    </Tooltip>
                     <IconButton size="small" onClick={() => openEdit(c)}><Edit fontSize="small" /></IconButton>
                     <IconButton size="small" color="error" onClick={() => handleDelete(c.id)}>
                       <Delete fontSize="small" />
@@ -140,6 +376,7 @@ export default function CollectionsPage() {
         </>
       )}
 
+      {/* Create / Edit dialog */}
       <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 700 }}>{editCol ? 'Edit Collection' : 'Add Collection'}</DialogTitle>
         <form onSubmit={formik.handleSubmit}>
@@ -147,8 +384,11 @@ export default function CollectionsPage() {
             <Box>
               {imagePreview && <Box component="img" src={imagePreview} sx={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 1, mb: 1 }} />}
               <Button variant="outlined" component="label" size="small">
-                {imagePreview ? 'Change' : 'Upload Image'}
-                <input type="file" hidden accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) { setImageFile(f); setImagePreview(URL.createObjectURL(f)); } }} />
+                {imagePreview ? 'Change Image' : 'Upload Image'}
+                <input type="file" hidden accept="image/*" onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (f) { setImageFile(f); setImagePreview(URL.createObjectURL(f)); }
+                }} />
               </Button>
             </Box>
             <TextField label="Name" size="small" fullWidth required
@@ -168,6 +408,13 @@ export default function CollectionsPage() {
           </DialogActions>
         </form>
       </Dialog>
+
+      {/* Manage Products dialog */}
+      <ManageProductsDialog
+        collection={manageCol}
+        open={Boolean(manageCol)}
+        onClose={() => { setManageCol(null); fetchCollections(); }}
+      />
     </Box>
   );
 }
