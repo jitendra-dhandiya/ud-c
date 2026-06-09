@@ -41,7 +41,6 @@ const NAV_ITEMS = [
       { label: 'Homepage Builder', href: '/admin/homepage' },
       { label: 'Banners', href: '/admin/banners' },
       { label: 'Blogs', href: '/admin/blogs' },
-      { label: 'CMS Pages', href: '/admin/cms' },
     ],
   },
   { label: 'Coupons', icon: <LocalOffer fontSize="small" />, href: '/admin/coupons' },
