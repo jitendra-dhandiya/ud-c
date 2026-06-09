@@ -17,6 +17,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '../../store';
 import { toggleCart } from '../../store/slices/cartSlice';
+import { setGender, type GenderType } from '../../store/slices/genderSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { productApi } from '../../services/api.service';
 
@@ -38,7 +39,17 @@ export default function Navbar({ settings = {} }: NavbarProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { itemCount } = useAppSelector((s) => s.cart);
+  const gender = useAppSelector((s) => s.gender.selected);
   const { user, isAuthenticated, logout, isAdmin } = useAuth();
+
+  const handleGenderChange = (g: GenderType) => {
+    const next = gender === g ? null : g;
+    dispatch(setGender(next));
+    if (typeof window !== 'undefined') {
+      if (next) localStorage.setItem('ud_gender', next);
+      else localStorage.removeItem('ud_gender');
+    }
+  };
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -93,6 +104,8 @@ export default function Navbar({ settings = {} }: NavbarProps) {
     setSearchResults([]);
   };
 
+  const genderToggleEnabled = settings.gender_toggle_enabled !== 'false';
+
   return (
     <>
       {/* Announcement Bar */}
@@ -109,6 +122,48 @@ export default function Navbar({ settings = {} }: NavbarProps) {
       >
         {settings.announcement_text || 'FREE SHIPPING ON ORDERS ABOVE ₹999'}
       </Box>
+
+      {/* Gender Toggle Bar */}
+      {genderToggleEnabled && (
+        <Box
+          sx={{
+            bgcolor: 'white',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            display: 'flex',
+            justifyContent: 'center',
+            position: 'sticky',
+            top: 0,
+            zIndex: 1200,
+          }}
+        >
+          {(['MEN', 'WOMEN'] as const).map((g) => (
+            <Button
+              key={g}
+              onClick={() => handleGenderChange(g)}
+              disableRipple
+              sx={{
+                px: { xs: 4, md: 6 },
+                py: 0.9,
+                borderRadius: 0,
+                fontWeight: 700,
+                fontSize: '0.7rem',
+                letterSpacing: '0.18em',
+                color: gender === g ? '#1a1a1a' : '#aaa',
+                borderBottom: gender === g ? '2px solid #1a1a1a' : '2px solid transparent',
+                transition: 'color 0.2s, border-color 0.2s',
+                minWidth: 0,
+                '&:hover': {
+                  bgcolor: 'transparent',
+                  color: '#1a1a1a',
+                },
+              }}
+            >
+              {g}
+            </Button>
+          ))}
+        </Box>
+      )}
 
       <AppBar
         position="sticky"
@@ -406,6 +461,31 @@ export default function Navbar({ settings = {} }: NavbarProps) {
             </IconButton>
           </Box>
           <Divider />
+          {/* Gender toggle in mobile drawer */}
+          {genderToggleEnabled && (
+            <Box sx={{ display: 'flex', borderBottom: '1px solid', borderColor: 'divider' }}>
+              {(['MEN', 'WOMEN'] as const).map((g) => (
+                <Button
+                  key={g}
+                  fullWidth
+                  onClick={() => { handleGenderChange(g); }}
+                  disableRipple
+                  sx={{
+                    py: 1.25,
+                    borderRadius: 0,
+                    fontWeight: 700,
+                    fontSize: '0.7rem',
+                    letterSpacing: '0.15em',
+                    color: gender === g ? '#1a1a1a' : '#aaa',
+                    borderBottom: gender === g ? '2px solid #1a1a1a' : '2px solid transparent',
+                    '&:hover': { bgcolor: 'transparent', color: '#1a1a1a' },
+                  }}
+                >
+                  {g}
+                </Button>
+              ))}
+            </Box>
+          )}
           <List>
             {NAV_LINKS.map((link) => (
               <ListItem key={link.href} component={Link} href={link.href} onClick={() => setMobileOpen(false)}

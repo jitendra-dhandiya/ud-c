@@ -12,6 +12,7 @@ import { Add, Remove, ArrowBack, CloudUpload, Delete, Edit } from '@mui/icons-ma
 import { useFormik, FormikProvider } from 'formik';
 import * as Yup from 'yup';
 import { productApi, categoryApi, variantApi } from '../../../../../services/api.service';
+import { GENDERS } from '../../../../../constants';
 import { toast } from 'react-hot-toast';
 
 const schema = Yup.object({
@@ -76,6 +77,7 @@ export default function EditProductPage() {
       sku: product?.sku || '',
       brand: product?.brand || '',
       categoryId: product?.categoryId || '',
+      gender: product?.gender || 'UNISEX',
       stockQuantity: product?.stockQuantity ?? 0,
       isActive: product?.isActive ?? true,
       isFeatured: product?.isFeatured ?? false,
@@ -101,6 +103,7 @@ export default function EditProductPage() {
         if (values.brand) fd.append('brand', values.brand);
         fd.append('categoryId', values.categoryId);
         fd.append('stockQuantity', String(values.stockQuantity));
+        fd.append('gender', values.gender);
         fd.append('isActive', String(values.isActive));
         fd.append('isFeatured', String(values.isFeatured));
         fd.append('isTrending', String(values.isTrending));
@@ -299,7 +302,12 @@ export default function EditProductPage() {
                         {categories.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
                       </TextField>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid item xs={6} sm={3}>
+                      <TextField select label="Gender" size="small" fullWidth {...formik.getFieldProps('gender')}>
+                        {GENDERS.map(g => <MenuItem key={g.value} value={g.value}>{g.label}</MenuItem>)}
+                      </TextField>
+                    </Grid>
+                    <Grid item xs={6} sm={3}>
                       <TextField label="Stock Quantity" type="number" size="small" fullWidth
                         {...formik.getFieldProps('stockQuantity')} inputProps={{ min: 0 }} />
                     </Grid>

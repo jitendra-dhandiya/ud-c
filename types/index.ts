@@ -104,6 +104,7 @@ export interface Product {
   tags?: { tag: string }[];
   faqs?: { question: string; answer: string }[];
   relatedProducts?: Product[];
+  gender?: 'MEN' | 'WOMEN' | 'UNISEX';
   createdAt?: string;
   updatedAt?: string;
 }

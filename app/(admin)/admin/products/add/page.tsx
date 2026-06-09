@@ -9,6 +9,7 @@ import { Add, Remove, ArrowBack, CloudUpload } from '@mui/icons-material';
 import { useFormik, FieldArray, FormikProvider } from 'formik';
 import * as Yup from 'yup';
 import { productApi, categoryApi } from '../../../../../services/api.service';
+import { GENDERS } from '../../../../../constants';
 import { toast } from 'react-hot-toast';
 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
@@ -36,7 +37,7 @@ export default function AddProductPage() {
   const formik = useFormik({
     initialValues: {
       name: '', description: '', basePrice: '', salePrice: '', sku: '',
-      categoryId: '', collectionId: '',
+      categoryId: '', collectionId: '', gender: 'UNISEX',
       isFeatured: false, isTrending: false, isNewArrival: true, isBestSeller: false,
       material: '', careInstructions: '', fit: '', style: '',
       metaTitle: '', metaDescription: '',
@@ -54,6 +55,7 @@ export default function AddProductPage() {
         fd.append('sku', values.sku);
         fd.append('categoryId', values.categoryId);
         if (values.collectionId) fd.append('collectionId', values.collectionId);
+        fd.append('gender', values.gender);
         fd.append('isFeatured', String(values.isFeatured));
         fd.append('isTrending', String(values.isTrending));
         fd.append('isNewArrival', String(values.isNewArrival));
@@ -150,6 +152,11 @@ export default function AddProductPage() {
                         error={formik.touched.categoryId && !!formik.errors.categoryId}
                         helperText={formik.touched.categoryId && formik.errors.categoryId}>
                         {categories.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
+                      </TextField>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <TextField select label="Gender" size="small" fullWidth {...formik.getFieldProps('gender')}>
+                        {GENDERS.map(g => <MenuItem key={g.value} value={g.value}>{g.label}</MenuItem>)}
                       </TextField>
                     </Grid>
                   </Grid>
