@@ -53,7 +53,6 @@ const NAV_ITEMS = [
     children: [
       { label: 'SEO', href: '/admin/seo' },
       { label: 'Settings', href: '/admin/settings' },
-      { label: 'Users & Roles', href: '/admin/roles' },
     ],
   },
 ];
