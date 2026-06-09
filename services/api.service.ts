@@ -230,6 +230,12 @@ export const collectionApi = {
     return api.put(`/collections/${id}`, data, isForm ? { headers: { 'Content-Type': 'multipart/form-data' } } : {});
   },
   delete: (id: string) => api.delete(`/collections/${id}`),
+  getProducts: (id: string, params?: Record<string, unknown>) =>
+    api.get(`/collections/${id}/products`, { params }),
+  addProduct: (id: string, productId: string) =>
+    api.post(`/collections/${id}/products`, { productId }),
+  removeProduct: (id: string, productId: string) =>
+    api.delete(`/collections/${id}/products/${productId}`),
 };
 
 // ─── Media ────────────────────────────────────────────────────
