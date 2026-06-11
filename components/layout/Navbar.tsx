@@ -43,12 +43,9 @@ export default function Navbar({ settings = {} }: NavbarProps) {
   const { user, isAuthenticated, logout, isAdmin } = useAuth();
 
   const handleGenderChange = (g: GenderType) => {
-    const next = gender === g ? null : g;
-    dispatch(setGender(next));
-    if (typeof window !== 'undefined') {
-      if (next) localStorage.setItem('ud_gender', next);
-      else localStorage.removeItem('ud_gender');
-    }
+    if (gender === g) return;
+    dispatch(setGender(g));
+    localStorage.setItem('ud_gender', g);
   };
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -137,7 +134,7 @@ export default function Navbar({ settings = {} }: NavbarProps) {
             zIndex: 1200,
           }}
         >
-          {(['MEN', 'WOMEN'] as const).map((g) => (
+          {(['WOMEN', 'MEN'] as const).map((g) => (
             <Button
               key={g}
               onClick={() => handleGenderChange(g)}
@@ -464,7 +461,7 @@ export default function Navbar({ settings = {} }: NavbarProps) {
           {/* Gender toggle in mobile drawer */}
           {genderToggleEnabled && (
             <Box sx={{ display: 'flex', borderBottom: '1px solid', borderColor: 'divider' }}>
-              {(['MEN', 'WOMEN'] as const).map((g) => (
+              {(['WOMEN', 'MEN'] as const).map((g) => (
                 <Button
                   key={g}
                   fullWidth

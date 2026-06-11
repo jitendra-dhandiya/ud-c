@@ -51,7 +51,7 @@ export default function BannersPage() {
 
   const formik = useFormik({
     initialValues: {
-      title: '', subtitle: '', type: 'HERO', linkUrl: '', buttonText: '',
+      title: '', subtitle: '', type: 'HERO', gender: 'ALL', linkUrl: '', buttonText: '',
       isActive: true, sortOrder: 0,
     },
     validationSchema: schema,
@@ -86,6 +86,7 @@ export default function BannersPage() {
     setEditBanner(banner); setImagePreview(banner.image || banner.imageUrl || ''); setImageFile(null);
     formik.setValues({
       title: banner.title || '', subtitle: banner.subtitle || '', type: banner.type || 'HERO',
+      gender: banner.gender || 'ALL',
       linkUrl: banner.link || banner.linkUrl || '', buttonText: banner.ctaText || banner.buttonText || '',
       isActive: banner.isActive ?? true, sortOrder: banner.sortOrder || 0,
     });
@@ -155,9 +156,19 @@ export default function BannersPage() {
                         <Typography color="text.secondary" variant="caption">No image</Typography>
                       </Box>
                     )}
-                    <Box sx={{ position: 'absolute', top: 8, left: 8 }}>
+                    <Box sx={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 0.5 }}>
                       <Chip label={banner.type} size="small"
                         sx={{ bgcolor: '#1a1a1a', color: '#fff', fontSize: '0.65rem' }} />
+                      {banner.gender && banner.gender !== 'ALL' && (
+                        <Chip
+                          label={banner.gender}
+                          size="small"
+                          sx={{
+                            bgcolor: banner.gender === 'WOMEN' ? '#e91e8c' : '#1565c0',
+                            color: '#fff', fontSize: '0.65rem',
+                          }}
+                        />
+                      )}
                     </Box>
                   </Box>
                   <CardContent sx={{ p: 2 }}>
@@ -242,6 +253,12 @@ export default function BannersPage() {
             <TextField label="Subtitle" size="small" fullWidth {...formik.getFieldProps('subtitle')} />
             <TextField select label="Type" size="small" fullWidth {...formik.getFieldProps('type')}>
               {BANNER_TYPES.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+            </TextField>
+            <TextField select label="Target Gender" size="small" fullWidth {...formik.getFieldProps('gender')}
+              helperText="ALL = shown for both Women and Men">
+              <MenuItem value="ALL">All Genders</MenuItem>
+              <MenuItem value="WOMEN">Women only</MenuItem>
+              <MenuItem value="MEN">Men only</MenuItem>
             </TextField>
             <TextField label="Link URL" size="small" fullWidth {...formik.getFieldProps('linkUrl')}
               error={formik.touched.linkUrl && !!formik.errors.linkUrl}

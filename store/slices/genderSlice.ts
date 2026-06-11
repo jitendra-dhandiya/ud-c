@@ -1,10 +1,10 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-export type GenderType = 'MEN' | 'WOMEN' | null;
+export type GenderType = 'MEN' | 'WOMEN';
 
 const genderSlice = createSlice({
   name: 'gender',
-  initialState: { selected: null as GenderType },
+  initialState: { selected: 'WOMEN' as GenderType },
   reducers: {
     setGender(state, action: PayloadAction<GenderType>) {
       state.selected = action.payload;

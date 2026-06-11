@@ -142,7 +142,8 @@ export const reviewApi = {
 
 // ─── Banners ──────────────────────────────────────────────────
 export const bannerApi = {
-  getByType: (type: string) => api.get<{ data: Banner[] }>(`/banners/type/${type}`),
+  getByType: (type: string, gender?: string) =>
+    api.get<{ data: Banner[] }>(`/banners/type/${type}`, { params: gender ? { gender } : {} }),
   getAll: (params?: Record<string, unknown>) => api.get('/banners', { params }),
   create: (data: FormData) =>
     api.post('/banners', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
