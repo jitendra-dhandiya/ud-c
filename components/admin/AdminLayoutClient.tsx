@@ -40,6 +40,7 @@ const NAV_ITEMS = [
     children: [
       { label: 'Homepage Builder', href: '/admin/homepage' },
       { label: 'Banners', href: '/admin/banners' },
+      { label: 'Store Locations', href: '/admin/stores' },
       { label: 'Blogs', href: '/admin/blogs' },
     ],
   },

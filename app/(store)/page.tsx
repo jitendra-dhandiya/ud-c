@@ -34,25 +34,35 @@ async function getCategories() {
   } catch { return []; }
 }
 
+async function getStores() {
+  try {
+    const res = await fetch(`${API}/stores`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    return (await res.json()).data || [];
+  } catch { return []; }
+}
+
 export default async function HomePage() {
-  const [homepageData, featured, newArrivals, trending, bestSellers, categories] = await Promise.all([
+  const [homepageData, featured, newArrivals, trending, bestSellers, categories, stores] = await Promise.all([
     getHomepageData(),
     getProducts('featured'),
     getProducts('new-arrivals'),
     getProducts('trending'),
     getProducts('best-sellers'),
     getCategories(),
+    getStores(),
   ]);
 
   const sections: any[] = homepageData?.sections || [];
   const heroBanners: any[] = homepageData?.heroBanners || [];
+  const promoBanners: any[] = homepageData?.promoBanners || [];
   const testimonials: any[] = homepageData?.testimonials || [];
 
   return (
     <>
       <GenderHomePage
         sections={sections}
-        initialData={{ heroBanners, featured, newArrivals, trending, bestSellers, categories, testimonials }}
+        initialData={{ heroBanners, promoBanners, featured, newArrivals, trending, bestSellers, categories, testimonials, stores }}
       />
       <Box sx={{ display: { md: 'none' }, height: 64 }} />
     </>

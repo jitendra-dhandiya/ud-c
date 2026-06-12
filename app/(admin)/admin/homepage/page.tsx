@@ -3,9 +3,9 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   Box, Typography, Button, Card, CardContent, Switch, IconButton,
   Chip, Skeleton, TextField, Dialog, DialogTitle, DialogContent,
-  DialogActions, Stack,
+  DialogActions, Stack, MenuItem, Select, FormControl, InputLabel,
 } from '@mui/material';
-import { Edit, ExpandMore, ExpandLess, DragIndicator } from '@mui/icons-material';
+import { Edit, ExpandMore, ExpandLess, DragIndicator, Add, Delete } from '@mui/icons-material';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, DragEndEvent, DragOverlay, DragStartEvent,
@@ -21,12 +21,17 @@ import { toast } from 'react-hot-toast';
 const SECTION_LABELS: Record<string, string> = {
   HERO_SLIDER: 'Hero Slider',
   PROMO_STRIP: 'Promo Strip',
+  SHOP_LATEST: 'Shop the Latest',
   FEATURED_PRODUCTS: 'Featured Products',
   NEW_ARRIVALS: 'New Arrivals',
   TRENDING_PRODUCTS: 'Trending Products',
   BEST_SELLERS: 'Best Sellers',
+  FEATURED_CATEGORIES: 'Shop by Category',
   CATEGORY_SHOWCASE: 'Category Showcase',
+  COLLECTION_BANNERS: 'Collection Banners',
   COLLECTION_BANNER: 'Collection Banner',
+  COLLECTION_SHOWCASE: 'Collection Showcase',
+  PROMOTIONAL_BANNERS: 'Promotional Banners',
   TESTIMONIALS: 'Testimonials',
   NEWSLETTER: 'Newsletter',
   BRAND_LOGOS: 'Brand Logos',
@@ -34,11 +39,29 @@ const SECTION_LABELS: Record<string, string> = {
   BLOG_PREVIEW: 'Blog Preview',
   INSTAGRAM_FEED: 'Instagram Feed',
   CUSTOM_BANNER: 'Custom Banner',
+  STORE_LOCATOR: 'Store Locations',
 };
+
+// Section types available when adding a new section
+const ADDABLE_SECTIONS = [
+  { type: 'HERO_SLIDER',          label: 'Hero Slider',           desc: 'Full-width image/video carousel' },
+  { type: 'PROMO_STRIP',          label: 'Promo Strip',           desc: 'Trust badges: free shipping, returns, etc.' },
+  { type: 'SHOP_LATEST',          label: 'Shop the Latest',       desc: 'Filter chips + product grid with gender tabs' },
+  { type: 'FEATURED_CATEGORIES',  label: 'Shop by Category',      desc: 'Bento grid of product categories' },
+  { type: 'COLLECTION_BANNERS',   label: 'Collection Banners',    desc: 'Horizontal scroll editorial cards' },
+  { type: 'PROMOTIONAL_BANNERS',  label: 'Promotional Banners',   desc: 'Sale / offer banners with CTA' },
+  { type: 'FEATURED_PRODUCTS',    label: 'Featured Products',     desc: 'Carousel of featured products' },
+  { type: 'NEW_ARRIVALS',         label: 'New Arrivals',          desc: 'Carousel of newest products' },
+  { type: 'TRENDING_PRODUCTS',    label: 'Trending Now',          desc: 'Carousel of trending products' },
+  { type: 'BEST_SELLERS',         label: 'Best Sellers',          desc: 'Carousel of best-selling products' },
+  { type: 'TESTIMONIALS',         label: 'Testimonials',          desc: 'Customer reviews & ratings' },
+  { type: 'STORE_LOCATOR',        label: 'Store Locations',       desc: '"Visit Our Stores" section with map links' },
+  { type: 'NEWSLETTER',           label: 'Newsletter Signup',     desc: 'Email subscription form' },
+];
 
 // ── Sortable card ─────────────────────────────────────────────
 function SortableSectionCard({
-  section, index, total, onToggle, onMoveUp, onMoveDown, onEdit, isDragging,
+  section, index, total, onToggle, onMoveUp, onMoveDown, onEdit, onDelete, isDragging,
 }: {
   section: any;
   index: number;
@@ -47,6 +70,7 @@ function SortableSectionCard({
   onMoveUp: (i: number) => void;
   onMoveDown: (i: number) => void;
   onEdit: (s: any) => void;
+  onDelete: (s: any) => void;
   isDragging?: boolean;
 }) {
   const {
@@ -125,6 +149,10 @@ function SortableSectionCard({
             <IconButton size="small" onClick={() => onEdit(section)}>
               <Edit sx={{ fontSize: 16 }} />
             </IconButton>
+            <IconButton size="small" onClick={() => onDelete(section)}
+              sx={{ color: 'error.main', '&:hover': { bgcolor: 'error.50' } }}>
+              <Delete sx={{ fontSize: 16 }} />
+            </IconButton>
             <Switch
               size="small"
               color="success"
@@ -164,6 +192,17 @@ export default function HomepageBuilderPage() {
   const [configStr, setConfigStr] = useState('');
   const [saving, setSaving] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Add section dialog
+  const [addOpen, setAddOpen] = useState(false);
+  const [newType, setNewType] = useState('');
+  const [newTitle, setNewTitle] = useState('');
+  const [newSubtitle, setNewSubtitle] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  // Delete confirm dialog
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -257,6 +296,49 @@ export default function HomepageBuilderPage() {
     }
   };
 
+  // ── Add section ────────────────────────────────────────────
+  const handleAdd = async () => {
+    if (!newType) return;
+    setAdding(true);
+    try {
+      const label = SECTION_LABELS[newType] || newType;
+      await homepageApi.createSection({
+        type: newType,
+        title: newTitle || label,
+        subtitle: newSubtitle || undefined,
+        isActive: true,
+        sortOrder: sections.length + 1,
+        config: {},
+      });
+      toast.success(`"${label}" section added`);
+      setAddOpen(false);
+      setNewType('');
+      setNewTitle('');
+      setNewSubtitle('');
+      fetchSections();
+    } catch {
+      toast.error('Failed to add section');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  // ── Delete section ──────────────────────────────────────────
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await homepageApi.deleteSection(deleteTarget.id);
+      toast.success(`"${SECTION_LABELS[deleteTarget.type] || deleteTarget.type}" removed`);
+      setDeleteTarget(null);
+      fetchSections();
+    } catch {
+      toast.error('Delete failed');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // ── Edit / save config ─────────────────────────────────────
   const openEdit = (section: any) => {
     setEditSection(section);
@@ -287,13 +369,23 @@ export default function HomepageBuilderPage() {
 
   return (
     <Box>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 700 }}>
-          Homepage Builder
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          Drag cards to reorder sections, or use the arrow buttons. Toggle the switch to show / hide each section.
-        </Typography>
+      <Box sx={{ mb: 3, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Typography variant="h5" sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 700 }}>
+            Homepage Builder
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Drag cards to reorder sections, or use the arrow buttons. Toggle the switch to show / hide each section.
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={() => setAddOpen(true)}
+          sx={{ bgcolor: '#1a1a1a', '&:hover': { bgcolor: '#333' }, borderRadius: 1.5, fontWeight: 700, fontSize: '0.8rem' }}
+        >
+          Add Section
+        </Button>
       </Box>
 
       {loading ? (
@@ -321,6 +413,7 @@ export default function HomepageBuilderPage() {
                   onMoveUp={handleMoveUp}
                   onMoveDown={handleMoveDown}
                   onEdit={openEdit}
+                  onDelete={(s) => setDeleteTarget(s)}
                 />
               ))}
             </Stack>
@@ -332,6 +425,76 @@ export default function HomepageBuilderPage() {
           </DragOverlay>
         </DndContext>
       )}
+
+      {/* ── Add Section dialog ──────────────────────────────── */}
+      <Dialog open={addOpen} onClose={() => setAddOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Add New Section</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2 }}>
+          <FormControl fullWidth size="small">
+            <InputLabel>Section Type</InputLabel>
+            <Select
+              label="Section Type"
+              value={newType}
+              onChange={(e) => {
+                setNewType(e.target.value);
+                setNewTitle(SECTION_LABELS[e.target.value] || '');
+              }}
+            >
+              {ADDABLE_SECTIONS.map((s) => (
+                <MenuItem key={s.type} value={s.type}>
+                  <Box>
+                    <Typography variant="body2" fontWeight={600}>{s.label}</Typography>
+                    <Typography variant="caption" color="text.secondary">{s.desc}</Typography>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            label="Section Title (optional)" size="small" fullWidth
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            helperText="Leave blank to use the default label"
+          />
+          <TextField
+            label="Subtitle (optional)" size="small" fullWidth
+            value={newSubtitle}
+            onChange={(e) => setNewSubtitle(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setAddOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleAdd}
+            disabled={!newType || adding}
+            sx={{ bgcolor: '#1a1a1a', '&:hover': { bgcolor: '#333' } }}
+          >
+            {adding ? 'Adding...' : 'Add Section'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Delete confirm dialog ────────────────────────────── */}
+      <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Remove Section?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            This will permanently remove the <strong>"{deleteTarget ? (SECTION_LABELS[deleteTarget.type] || deleteTarget.type) : ''}"</strong> section from the homepage.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            {deleting ? 'Removing...' : 'Remove'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Edit section dialog */}
       <Dialog open={!!editSection} onClose={() => setEditSection(null)} maxWidth="sm" fullWidth>

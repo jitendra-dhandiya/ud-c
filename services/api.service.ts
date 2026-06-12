@@ -168,6 +168,16 @@ export const homepageApi = {
     api.put('/homepage/reorder', { items }),
 };
 
+// ─── Stores ───────────────────────────────────────────────────
+export const storeApi = {
+  getAll: () => api.get('/stores'),
+  getAllAdmin: () => api.get('/stores/admin'),
+  create: (data: FormData) => api.post('/stores', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  update: (id: string, data: FormData) => api.put(`/stores/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  delete: (id: string) => api.delete(`/stores/${id}`),
+  reorder: (items: { id: string; sortOrder: number }[]) => api.put('/stores/reorder', { items }),
+};
+
 // ─── Blogs ────────────────────────────────────────────────────
 export const blogApi = {
   getAll: (params?: Record<string, unknown>) => api.get('/blogs', { params }),
