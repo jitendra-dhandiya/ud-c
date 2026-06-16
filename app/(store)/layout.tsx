@@ -5,12 +5,14 @@ import MobileBottomNav from '../../components/layout/MobileBottomNav';
 import AuthInitializer from '../../components/common/AuthInitializer';
 import GenderInitializer from '../../components/common/GenderInitializer';
 import LoginModal from '../../components/auth/LoginModal';
+import { API_URL } from '../../constants';
 
-const API = process.env.BACKEND_URL || 'http://localhost:5000';
+// Strip /api/v1 to get the base server URL — works for both localhost and production
+const API_BASE = API_URL.replace(/\/api\/v1\/?$/, '');
 
 async function getPublicSettings(): Promise<Record<string, string>> {
   try {
-    const res = await fetch(`${API}/api/v1/settings/public`, { cache: 'no-store' });
+    const res = await fetch(`${API_BASE}/api/v1/settings/public`, { cache: 'no-store' });
     if (!res.ok) return {};
     const json = await res.json();
     return json.data || {};
@@ -21,8 +23,8 @@ async function getPublicSettings(): Promise<Record<string, string>> {
 
 async function getNavCategories() {
   try {
-    const res = await fetch(`${API}/api/v1/categories/nav-menu`, {
-      next: { revalidate: 60 }, // re-fetch at most every 60 s
+    const res = await fetch(`${API_BASE}/api/v1/categories/nav-menu`, {
+      next: { revalidate: 60 },
     });
     if (!res.ok) return [];
     const json = await res.json();
