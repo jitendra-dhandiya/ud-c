@@ -1,14 +1,17 @@
 'use client';
-import { ReactNode, useMemo } from 'react';
+import { ReactNode } from 'react';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import EmotionRegistry from './EmotionRegistry';
 import theme from '../themes';
 
 export default function ThemeProvider({ children }: { children: ReactNode }) {
   return (
-    <MuiThemeProvider theme={theme}>
-      <CssBaseline />
-      {children}
-    </MuiThemeProvider>
+    <EmotionRegistry>
+      <MuiThemeProvider theme={theme}>
+        <CssBaseline />
+        {children}
+      </MuiThemeProvider>
+    </EmotionRegistry>
   );
 }
