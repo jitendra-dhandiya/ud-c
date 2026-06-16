@@ -42,6 +42,9 @@ export default function AddProductPage() {
       material: '', careInstructions: '', fit: '', style: '',
       metaTitle: '', metaDescription: '',
       tags: [] as string[],
+      standardShippingCharge: '' as string | number,
+      codShippingCharge: '' as string | number,
+      expressShippingCharge: '' as string | number,
       variants: [{ color: '', colorHex: '#000000', sizes: SIZES.map(s => ({ size: s, stock: 10, price: '' })) }],
     },
     validationSchema: schema,
@@ -68,6 +71,9 @@ export default function AddProductPage() {
         fd.append('metaDescription', values.metaDescription);
         fd.append('tags', JSON.stringify(values.tags));
         fd.append('variants', JSON.stringify(values.variants));
+        if (values.standardShippingCharge !== '') fd.append('standardShippingCharge', String(values.standardShippingCharge));
+        if (values.codShippingCharge !== '') fd.append('codShippingCharge', String(values.codShippingCharge));
+        if (values.expressShippingCharge !== '') fd.append('expressShippingCharge', String(values.expressShippingCharge));
         images.forEach(img => fd.append('images', img));
 
         await productApi.create(fd);
@@ -269,6 +275,34 @@ export default function AddProductPage() {
                   <Grid container spacing={2}>
                     <Grid item xs={12}><TextField label="Meta Title" size="small" fullWidth {...formik.getFieldProps('metaTitle')} /></Grid>
                     <Grid item xs={12}><TextField label="Meta Description" size="small" fullWidth multiline rows={2} {...formik.getFieldProps('metaDescription')} /></Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+
+              {/* Delivery Charges */}
+              <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, mb: 3 }}>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>Delivery Charges</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                    Custom charges for this product. Leave blank to use global rates (Standard ₹79 · COD ₹149 · Express ₹249).
+                    For multi-product orders, the highest charge applies.
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={4}>
+                      <TextField label="Standard (₹)" type="number" size="small" fullWidth
+                        placeholder="₹79" inputProps={{ min: 0 }}
+                        {...formik.getFieldProps('standardShippingCharge')} />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <TextField label="COD (₹)" type="number" size="small" fullWidth
+                        placeholder="₹149" inputProps={{ min: 0 }}
+                        {...formik.getFieldProps('codShippingCharge')} />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <TextField label="Express (₹)" type="number" size="small" fullWidth
+                        placeholder="₹249" inputProps={{ min: 0 }}
+                        {...formik.getFieldProps('expressShippingCharge')} />
+                    </Grid>
                   </Grid>
                 </CardContent>
               </Card>

@@ -89,6 +89,9 @@ export default function EditProductPage() {
       metaTitle: product?.metaTitle || '',
       metaDesc: product?.metaDesc || '',
       tags: (product?.tags?.map((t: any) => t.tag) || []) as string[],
+      standardShippingCharge: product?.standardShippingCharge ?? '',
+      codShippingCharge: product?.codShippingCharge ?? '',
+      expressShippingCharge: product?.expressShippingCharge ?? '',
     },
     validationSchema: schema,
     onSubmit: async (values, { setSubmitting }) => {
@@ -114,6 +117,9 @@ export default function EditProductPage() {
         if (values.metaTitle) fd.append('metaTitle', values.metaTitle);
         if (values.metaDesc) fd.append('metaDesc', values.metaDesc);
         fd.append('tags', JSON.stringify(values.tags));
+        if (values.standardShippingCharge !== '') fd.append('standardShippingCharge', String(values.standardShippingCharge));
+        if (values.codShippingCharge !== '') fd.append('codShippingCharge', String(values.codShippingCharge));
+        if (values.expressShippingCharge !== '') fd.append('expressShippingCharge', String(values.expressShippingCharge));
         if (removedImageIds.length) fd.append('removeImageIds', JSON.stringify(removedImageIds));
         newImages.forEach(img => fd.append('images', img));
 
@@ -310,6 +316,55 @@ export default function EditProductPage() {
                     <Grid item xs={6} sm={3}>
                       <TextField label="Stock Quantity" type="number" size="small" fullWidth
                         {...formik.getFieldProps('stockQuantity')} inputProps={{ min: 0 }} />
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+
+              {/* Delivery Charges */}
+              <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, mb: 3 }}>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>Delivery Charges</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                    Set custom delivery charges for this product. Leave blank to use the global rate (Standard ₹79 · COD ₹149 · Express ₹249).
+                    For orders with multiple products, the highest charge applies.
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        label="Standard Delivery (₹)"
+                        type="number"
+                        size="small"
+                        fullWidth
+                        placeholder="Global: ₹79"
+                        {...formik.getFieldProps('standardShippingCharge')}
+                        inputProps={{ min: 0 }}
+                        InputProps={{ startAdornment: <Typography variant="caption" sx={{ mr: 0.5, color: '#666' }}>₹</Typography> }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        label="COD Delivery (₹)"
+                        type="number"
+                        size="small"
+                        fullWidth
+                        placeholder="Global: ₹149"
+                        {...formik.getFieldProps('codShippingCharge')}
+                        inputProps={{ min: 0 }}
+                        InputProps={{ startAdornment: <Typography variant="caption" sx={{ mr: 0.5, color: '#666' }}>₹</Typography> }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        label="Express Delivery (₹)"
+                        type="number"
+                        size="small"
+                        fullWidth
+                        placeholder="Global: ₹249"
+                        {...formik.getFieldProps('expressShippingCharge')}
+                        inputProps={{ min: 0 }}
+                        InputProps={{ startAdornment: <Typography variant="caption" sx={{ mr: 0.5, color: '#666' }}>₹</Typography> }}
+                      />
                     </Grid>
                   </Grid>
                 </CardContent>
