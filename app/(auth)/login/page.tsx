@@ -1,21 +1,31 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Box, Container, Typography, TextField, Button, Divider, CircularProgress, IconButton } from '@mui/material';
-import { ArrowBack } from '@mui/icons-material';
+import { useRouter } from 'next/navigation';
+import { Box, Container, Typography, TextField, Button, Divider, CircularProgress, IconButton, InputAdornment } from '@mui/material';
+import { ArrowBack, Visibility, VisibilityOff } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from '../../../hooks/useAuth';
+import { useAppSelector } from '../../../store';
 import { motion } from 'framer-motion';
 
 const schema = Yup.object({
-  email: Yup.string().email('Invalid email').required('Email is required'),
+  email:    Yup.string().email('Invalid email').required('Email is required'),
   password: Yup.string().required('Password is required'),
 });
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+  const router     = useRouter();
+  const isAuth     = useAppSelector((s) => s.auth.isAuthenticated);
   const [submitting, setSubmitting] = useState(false);
+  const [showPwd, setShowPwd]       = useState(false);
+
+  // If already logged in, bounce to home
+  useEffect(() => {
+    if (isAuth) router.replace('/');
+  }, [isAuth, router]);
 
   const formik = useFormik({
     initialValues: { email: '', password: '' },
@@ -23,7 +33,9 @@ export default function LoginPage() {
     onSubmit: async ({ email, password }) => {
       setSubmitting(true);
       try {
-        await login(email, password);
+        await login(email, password, () => router.push('/'));
+      } catch {
+        // error already toasted in useAuth
       } finally {
         setSubmitting(false);
       }
@@ -35,7 +47,6 @@ export default function LoginPage() {
       <Container maxWidth="xs">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <Box sx={{ bgcolor: 'white', p: 5, borderRadius: 2, boxShadow: 2, textAlign: 'center' }}>
-            {/* Back to home */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
               <IconButton component={Link} href="/" size="small" sx={{ color: '#666' }}>
                 <ArrowBack fontSize="small" />
@@ -58,29 +69,34 @@ export default function LoginPage() {
             <form onSubmit={formik.handleSubmit}>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <TextField
-                  name="email" label="Email" fullWidth size="small"
+                  name="email" label="Email" fullWidth size="small" type="email"
                   value={formik.values.email}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
+                  onChange={formik.handleChange} onBlur={formik.handleBlur}
                   error={formik.touched.email && !!formik.errors.email}
                   helperText={formik.touched.email && formik.errors.email}
                 />
                 <TextField
-                  name="password" label="Password" type="password" fullWidth size="small"
+                  name="password" label="Password" fullWidth size="small"
+                  type={showPwd ? 'text' : 'password'}
                   value={formik.values.password}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
+                  onChange={formik.handleChange} onBlur={formik.handleBlur}
                   error={formik.touched.password && !!formik.errors.password}
                   helperText={formik.touched.password && formik.errors.password}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton size="small" onClick={() => setShowPwd(p => !p)} tabIndex={-1}>
+                          {showPwd ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
                 />
                 <Button
                   type="submit" fullWidth variant="contained" disabled={submitting}
-                  sx={{ bgcolor: '#1a1a1a', py: 1.5, '&:hover': { bgcolor: '#333' } }}
+                  sx={{ bgcolor: '#1a1a1a', py: 1.5, fontWeight: 700, '&:hover': { bgcolor: '#333' } }}
                 >
-                  {submitting
-                    ? <CircularProgress size={20} sx={{ color: 'white' }} />
-                    : 'Sign In'
-                  }
+                  {submitting ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Sign In'}
                 </Button>
               </Box>
             </form>

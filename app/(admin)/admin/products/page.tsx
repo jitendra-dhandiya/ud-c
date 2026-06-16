@@ -74,7 +74,7 @@ export default function AdminProductsPage() {
         <Avatar
           src={row.original.images?.[0]?.url}
           variant="rounded"
-          sx={{ width: 44, height: 56, bgcolor: '#f5f5f5' }}
+          sx={{ width: 44, height: 59, bgcolor: '#f5f5f5' }}
         />
       ),
     }),

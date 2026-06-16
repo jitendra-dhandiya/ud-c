@@ -43,8 +43,38 @@ export const PAYMENT_METHODS = [
   { value: 'RAZORPAY', label: 'Pay Online (Cards, UPI, Net Banking)' },
 ];
 
+export const SHIPPING_METHODS = [
+  {
+    id: 'STANDARD',
+    label: 'Standard',
+    description: '📦 Enjoy discounted shipping on all eligible purchases',
+    charge: 79,
+    days: '5–7 business days',
+    payOnline: true,
+  },
+  {
+    id: 'COD',
+    label: 'COD',
+    description: 'Avoid the COD convenience fee by paying online',
+    charge: 149,
+    days: '5–7 business days',
+    payOnline: false,
+  },
+  {
+    id: 'EXPRESS',
+    label: 'Express',
+    description: '🚀 Experience fast delivery with our Express Shipping',
+    charge: 249,
+    days: '1–2 business days',
+    payOnline: true,
+  },
+] as const;
+
+export type ShippingMethodId = typeof SHIPPING_METHODS[number]['id'];
+
+// Legacy — kept so any other references don't break
 export const FREE_SHIPPING_THRESHOLD = 999;
-export const SHIPPING_CHARGE = 99;
+export const SHIPPING_CHARGE = 79;
 
 export const ITEMS_PER_PAGE = 20;
 export const ADMIN_ITEMS_PER_PAGE = 20;

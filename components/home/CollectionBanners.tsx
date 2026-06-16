@@ -60,7 +60,7 @@ export default function CollectionBanners({ categories, gender, title = 'Shop by
                 sx={{
                   position: 'relative',
                   width: { xs: 210, sm: 250, md: 290 },
-                  height: { xs: 295, sm: 345, md: 400 },
+                  height: { xs: 280, sm: 333, md: 387 },
                   overflow: 'hidden',
                   cursor: 'pointer',
                   '&:hover .coll-img': { transform: 'scale(1.06)' },

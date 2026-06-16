@@ -51,12 +51,15 @@ export const variantApi = {
 
 // ─── Categories ───────────────────────────────────────────────
 export const categoryApi = {
-  getAll: (params?: Record<string, unknown>) => api.get<{ data: Category[] }>('/categories', { params }),
+  getAll:      (params?: Record<string, unknown>) => api.get<{ data: Category[] }>('/categories', { params }),
   getFeatured: () => api.get<{ data: Category[] }>('/categories/featured'),
-  getBySlug: (slug: string) => api.get<{ data: Category }>(`/categories/${slug}`),
-  create: (data: FormData) => api.post('/categories', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  update: (id: string, data: FormData) => api.put(`/categories/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  delete: (id: string) => api.delete(`/categories/${id}`),
+  getNavMenu:       () => api.get('/categories/nav-menu'),
+  getParents:       () => api.get('/categories/parents'),
+  getHomeCategories: (gender?: string) => api.get('/categories/home', { params: gender && gender !== 'ALL' ? { gender } : {} }),
+  getBySlug:   (slug: string) => api.get<{ data: Category }>(`/categories/${slug}`),
+  create:      (data: FormData) => api.post('/categories', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  update:      (id: string, data: FormData) => api.put(`/categories/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  delete:      (id: string) => api.delete(`/categories/${id}`),
 };
 
 // ─── Cart ─────────────────────────────────────────────────────
@@ -89,10 +92,16 @@ export const orderApi = {
 
 // ─── Payments ─────────────────────────────────────────────────
 export const paymentApi = {
+  // Razorpay
   createRazorpayOrder: (orderId: string) =>
     api.post('/payments/razorpay/create', { orderId }),
   verifyPayment: (data: object) =>
     api.post('/payments/razorpay/verify', data),
+  // Cashfree
+  createCashfreeOrder: (orderId: string) =>
+    api.post('/payments/cashfree/create', { orderId }),
+  getCashfreePaymentStatus: (orderId: string) =>
+    api.get(`/payments/cashfree/status/${orderId}`),
 };
 
 // ─── Wishlist ─────────────────────────────────────────────────

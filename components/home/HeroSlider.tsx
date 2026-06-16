@@ -12,8 +12,11 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-fade';
 
-// Responsive hero height — tall enough to feel premium, not viewport-locked
-const HERO_H = { xs: 300, sm: 430, md: 580, lg: 700 };
+// Responsive hero height — matches ~3:1 wide editorial banner format on desktop
+// xs ~260px → 375px wide → 1.44:1 (portrait crop on mobile, shows center)
+// md ~500px → 1440px wide → ~2.9:1 (close to 3:1 reference)
+// lg ~580px → 1920px wide → ~3.3:1
+const HERO_H = { xs: 260, sm: 400, md: 500, lg: 580 };
 
 interface HeroSliderProps {
   banners: Banner[];
@@ -112,8 +115,9 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
                 src={banner.image}
                 alt={banner.title}
                 fill
-                style={{ objectFit: 'cover' }}
+                style={{ objectFit: 'cover', objectPosition: 'center center' }}
                 priority
+                sizes="100vw"
               />
               {/* Multi-stop gradient for better text legibility */}
               <Box sx={{

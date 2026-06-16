@@ -171,7 +171,7 @@ export default function AddProductPage() {
                     {imagePreviews.map((src, i) => (
                       <Box key={i} sx={{ position: 'relative' }}>
                         <Box component="img" src={src} alt=""
-                          sx={{ width: 90, height: 110, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
+                          sx={{ width: 90, height: 120, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
                         <IconButton size="small" onClick={() => removeImage(i)} sx={{
                           position: 'absolute', top: -8, right: -8, bgcolor: '#fff', boxShadow: 1,
                           '&:hover': { bgcolor: '#fff' }, p: 0.25,
@@ -181,7 +181,7 @@ export default function AddProductPage() {
                       </Box>
                     ))}
                     <Button component="label" variant="outlined" sx={{
-                      width: 90, height: 110, borderRadius: 1, borderStyle: 'dashed', flexDirection: 'column', gap: 0.5,
+                      width: 90, height: 120, borderRadius: 1, borderStyle: 'dashed', flexDirection: 'column', gap: 0.5,
                     }}>
                       <CloudUpload fontSize="small" />
                       <Typography variant="caption">Add</Typography>

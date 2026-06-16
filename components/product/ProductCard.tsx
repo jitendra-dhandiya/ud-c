@@ -57,7 +57,7 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
     >
       {/* ── Image block ── */}
       <Box
-        sx={{ position: 'relative', paddingTop: variant === 'compact' ? '110%' : '133%', bgcolor: '#f4f4f4', overflow: 'hidden', mb: 1.5 }}
+        sx={{ position: 'relative', paddingTop: '133%', bgcolor: '#f4f4f4', overflow: 'hidden', mb: 1.5 }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
@@ -73,7 +73,7 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
               transform: hovered ? 'scale(1.04)' : 'scale(1)',
               transition: 'opacity 0.45s ease, transform 0.7s ease',
             }}
-            sizes="(max-width: 768px) 50vw, 25vw"
+            sizes="(max-width: 600px) 50vw, (max-width: 900px) 33vw, 25vw"
           />
         ) : (
           <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc' }}>
@@ -93,7 +93,7 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
               transform: hovered ? 'scale(1.04)' : 'scale(1)',
               transition: 'opacity 0.45s ease, transform 0.7s ease',
             }}
-            sizes="(max-width: 768px) 50vw, 25vw"
+            sizes="(max-width: 600px) 50vw, (max-width: 900px) 33vw, 25vw"
           />
         )}
 

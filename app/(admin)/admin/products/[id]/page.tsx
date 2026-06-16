@@ -328,7 +328,7 @@ export default function EditProductPage() {
                     {visibleExistingImages.map((img: any) => (
                       <Box key={img.id} sx={{ position: 'relative' }}>
                         <Box component="img" src={img.url} alt=""
-                          sx={{ width: 90, height: 110, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
+                          sx={{ width: 90, height: 120, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
                         {img.isPrimary && (
                           <Chip label="Cover" size="small" sx={{
                             position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)',
@@ -346,7 +346,7 @@ export default function EditProductPage() {
                     {newPreviews.map((src, i) => (
                       <Box key={`new-${i}`} sx={{ position: 'relative' }}>
                         <Box component="img" src={src} alt=""
-                          sx={{ width: 90, height: 110, objectFit: 'cover', borderRadius: 1, border: '2px dashed #1a1a1a' }} />
+                          sx={{ width: 90, height: 120, objectFit: 'cover', borderRadius: 1, border: '2px dashed #1a1a1a' }} />
                         <Chip label="New" size="small" sx={{
                           position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)',
                           fontSize: '0.55rem', height: 16, bgcolor: '#e8f5e9', color: '#2e7d32',
@@ -359,7 +359,7 @@ export default function EditProductPage() {
                       </Box>
                     ))}
                     <Button component="label" variant="outlined" sx={{
-                      width: 90, height: 110, borderRadius: 1, borderStyle: 'dashed', flexDirection: 'column', gap: 0.5,
+                      width: 90, height: 120, borderRadius: 1, borderStyle: 'dashed', flexDirection: 'column', gap: 0.5,
                     }}>
                       <CloudUpload fontSize="small" />
                       <Typography variant="caption">Add</Typography>

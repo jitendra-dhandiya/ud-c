@@ -72,7 +72,7 @@ export default function CartDrawer() {
             {cart.items.map((item) => (
               <Box key={item.id} sx={{ display: 'flex', gap: 2, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
                 {/* Product image */}
-                <Box sx={{ position: 'relative', width: 80, height: 100, flexShrink: 0, bgcolor: '#f5f5f5', borderRadius: 1, overflow: 'hidden' }}>
+                <Box sx={{ position: 'relative', width: 80, height: 107, flexShrink: 0, bgcolor: '#f5f5f5', borderRadius: 1, overflow: 'hidden' }}>
                   {item.product?.images?.[0]?.url && (
                     <Image
                       src={item.product.images[0].url}

@@ -1,272 +1,246 @@
 'use client';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Box, Container, Typography } from '@mui/material';
+import { Box, Container, Typography, ButtonBase } from '@mui/material';
 import { motion } from 'framer-motion';
-import type { Category } from '../../types';
+import { categoryApi } from '../../services/api.service';
 
-const DARK_GRADIENTS = [
-  'linear-gradient(160deg, #1a0a2e 0%, #2d1b4e 100%)',
-  'linear-gradient(160deg, #071f18 0%, #0d3b2e 100%)',
-  'linear-gradient(160deg, #1f0e07 0%, #3b1a0d 100%)',
-  'linear-gradient(160deg, #0a1630 0%, #1a2d4e 100%)',
-  'linear-gradient(160deg, #1a1a07 0%, #2d2d0d 100%)',
-  'linear-gradient(160deg, #1a0710 0%, #2d0d1a 100%)',
+const GENDER_TABS = ['ALL', 'WOMEN', 'MEN'] as const;
+type GenderTab = typeof GENDER_TABS[number];
+
+const FALLBACK_COLORS = [
+  '#0d0d1a', '#0a1a0d', '#1a0a0a', '#0d0a1a', '#1a1a0a', '#0a0d1a',
 ];
 
-interface Props {
-  categories: Category[];
+interface HomeCategory {
+  id: string;
+  name: string;
+  slug: string;
+  image?: string;
+  gender?: string;
+  _count?: { products: number };
 }
 
-export default function CategoryShowcase({ categories }: Props) {
-  if (!categories.length) return null;
-  const cats = categories.slice(0, 6);
+interface Props {
+  initialCategories?: HomeCategory[];
+}
+
+export default function CategoryShowcase({ initialCategories = [] }: Props) {
+  const [categories, setCategories] = useState<HomeCategory[]>(initialCategories);
+  const [tab, setTab] = useState<GenderTab>('ALL');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    categoryApi.getHomeCategories(tab === 'ALL' ? undefined : tab)
+      .then(({ data }) => setCategories((data as any).data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [tab]);
+
+  if (!loading && categories.length === 0 && initialCategories.length === 0) return null;
 
   return (
     <Box sx={{ py: { xs: 7, md: 11 }, bgcolor: '#fff' }}>
       <Container maxWidth="xl">
 
-        {/* ── Section header ────────────────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.55 }}>
-          <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', mb: { xs: 4, md: 6 } }}>
+        {/* ── Header ─────────────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', mb: { xs: 3, md: 5 }, gap: 2, flexWrap: 'wrap' }}>
             <Box>
               <Typography sx={{
-                fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.28em',
+                fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.28em',
                 textTransform: 'uppercase', color: '#c9a84c', display: 'block', mb: 1,
               }}>
                 Explore
               </Typography>
-              <Typography
-                variant="h2"
-                sx={{
-                  fontFamily: 'var(--font-playfair)',
-                  fontWeight: 700,
-                  fontSize: { xs: '1.7rem', sm: '2.3rem', md: '3rem' },
-                  color: '#111',
-                  letterSpacing: '-0.02em',
-                  lineHeight: 1.05,
-                }}
-              >
+              <Typography variant="h2" sx={{
+                fontFamily: 'var(--font-playfair)', fontWeight: 700,
+                fontSize: { xs: '1.7rem', sm: '2.3rem', md: '3rem' },
+                color: '#111', letterSpacing: '-0.02em', lineHeight: 1.05,
+              }}>
                 Shop by<br />Category
               </Typography>
             </Box>
+
             <Typography
               component={Link}
               href="/categories"
               sx={{
                 fontSize: '0.72rem', fontWeight: 700, color: '#888',
-                textDecoration: 'underline', textUnderlineOffset: 4, whiteSpace: 'nowrap',
-                mb: 0.5, ml: 2, '&:hover': { color: '#c9a84c' }, transition: 'color 0.22s',
+                textDecoration: 'underline', textUnderlineOffset: 4,
+                whiteSpace: 'nowrap', mb: 0.5, ml: 2,
+                '&:hover': { color: '#c9a84c' }, transition: 'color 0.22s',
               }}
             >
               View all
             </Typography>
           </Box>
+
+          {/* ── Gender tabs ────────────────────────────────────────── */}
+          <Box sx={{ display: 'flex', gap: 0, mb: { xs: 3, md: 5 }, borderBottom: '2px solid #f0f0f0' }}>
+            {GENDER_TABS.map((g) => (
+              <ButtonBase
+                key={g}
+                onClick={() => setTab(g)}
+                sx={{
+                  px: { xs: 2, md: 3.5 },
+                  py: 1.25,
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  color: tab === g ? '#111' : '#aaa',
+                  borderBottom: tab === g ? '2px solid #111' : '2px solid transparent',
+                  mb: '-2px',
+                  transition: 'all 0.2s',
+                  '&:hover': { color: '#111' },
+                }}
+              >
+                {g}
+              </ButtonBase>
+            ))}
+          </Box>
         </motion.div>
 
-        {/* ── Bento grid ────────────────────────────────────────── */}
-        {/*
-          Desktop (3 cols: 2fr 1fr 1fr):
-            Row1: [Cat0 rowspan2] [Cat1] [Cat2]
-            Row2: [Cat0 rowspan2] [Cat3] [Cat4]
-            Row3: [Cat5 ──── full width ──────]
+        {/* ── Grid ───────────────────────────────────────────────── */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+            gap: { xs: 1.5, md: 2 },
+            opacity: loading ? 0.55 : 1,
+            transition: 'opacity 0.2s',
+          }}
+        >
+          {categories.map((cat, i) => (
+            <motion.div
+              key={cat.id}
+              initial={{ opacity: 0, y: 22 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: Math.min(i, 3) * 0.07, duration: 0.48 }}
+            >
+              <Link href={`/category/${cat.slug}`} style={{ textDecoration: 'none', display: 'block' }}>
+                <Box
+                  sx={{
+                    position: 'relative',
+                    aspectRatio: '4 / 5',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    bgcolor: FALLBACK_COLORS[i % FALLBACK_COLORS.length],
+                    '&:hover .cat-img': { transform: 'scale(1.06)' },
+                    '&:hover .cat-btn': { bgcolor: '#cc0000' },
+                  }}
+                >
+                  {/* Background image */}
+                  {cat.image && (
+                    <Image
+                      src={cat.image}
+                      alt={cat.name}
+                      fill
+                      className="cat-img"
+                      style={{ objectFit: 'cover', transition: 'transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94)' }}
+                      sizes="(max-width: 600px) 50vw, 25vw"
+                    />
+                  )}
 
-          Mobile (2 cols: 1fr 1fr):
-            Row1: [Cat0 ── full width ─────── ]
-            Row2: [Cat1      ] [Cat2          ]
-            Row3: [Cat3      ] [Cat4          ]
-            Row4: [Cat5 ── full width ─────── ]
-        */}
-        <Box sx={{ display: 'grid', gap: { xs: 1.5, md: 2 }, gridTemplateColumns: { xs: '1fr 1fr', md: '2fr 1fr 1fr' } }}>
+                  {/* Dark gradient overlay */}
+                  <Box sx={{
+                    position: 'absolute', inset: 0,
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.3) 55%, rgba(0,0,0,0.08) 100%)',
+                  }} />
 
-          {/* Cat 0 — hero card: full-width on mobile, spans 2 rows on desktop */}
-          {cats[0] && (
-            <Box sx={{ gridColumn: { xs: '1 / 3', md: '1 / 2' }, gridRow: { md: '1 / 3' } }}>
-              <CategoryCard category={cats[0]} height={{ xs: 260, sm: 320, md: '100%' }} minHeight={{ md: 500 }} index={0} featured />
+                  {/* Gender chip — top left */}
+                  {cat.gender && (
+                    <Box sx={{
+                      position: 'absolute', top: 12, left: 12,
+                      bgcolor: 'rgba(0,0,0,0.72)',
+                      color: 'white',
+                      fontSize: '0.58rem',
+                      fontWeight: 800,
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      px: 1.25, py: 0.4,
+                      border: '1px solid rgba(255,255,255,0.18)',
+                    }}>
+                      {cat.gender === 'WOMEN' ? 'WOMENS' : cat.gender === 'MEN' ? 'MENS' : cat.gender}
+                    </Box>
+                  )}
+
+                  {/* Bottom content */}
+                  <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: { xs: 1.75, md: 2.25 } }}>
+                    {/* "COLLECTION" label */}
+                    <Typography sx={{
+                      fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.2em',
+                      textTransform: 'uppercase', color: '#c9a84c', display: 'block', mb: 0.6,
+                    }}>
+                      Collection
+                    </Typography>
+
+                    {/* Category name */}
+                    <Typography sx={{
+                      color: '#FFE500',
+                      fontWeight: 900,
+                      fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+                      textTransform: 'uppercase',
+                      lineHeight: 1.15,
+                      letterSpacing: '-0.01em',
+                      mb: 0.5,
+                      textShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                    }}>
+                      {cat.name}
+                    </Typography>
+
+                    {/* Product count */}
+                    {cat._count !== undefined && (
+                      <Typography sx={{
+                        color: 'rgba(255,255,255,0.55)', fontSize: '0.65rem', fontWeight: 500, mb: 1.5,
+                      }}>
+                        {cat._count.products} products
+                      </Typography>
+                    )}
+
+                    {/* SHOP NOW button */}
+                    <Box
+                      className="cat-btn"
+                      sx={{
+                        display: 'inline-block',
+                        bgcolor: '#E53935',
+                        color: 'white',
+                        fontSize: '0.6rem',
+                        fontWeight: 800,
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        px: 1.75,
+                        py: 0.65,
+                        transition: 'background-color 0.2s',
+                      }}
+                    >
+                      Shop Now
+                    </Box>
+                  </Box>
+                </Box>
+              </Link>
+            </motion.div>
+          ))}
+
+          {/* Empty state */}
+          {!loading && categories.length === 0 && (
+            <Box sx={{ gridColumn: '1 / -1', py: 8, textAlign: 'center' }}>
+              <Typography color="text.secondary" fontSize="0.875rem">
+                No categories available for this selection.
+              </Typography>
             </Box>
           )}
-
-          {/* Cat 1 — top-right first */}
-          {cats[1] && (
-            <Box sx={{ gridColumn: { xs: '1 / 2', md: '2 / 3' }, gridRow: { md: '1 / 2' } }}>
-              <CategoryCard category={cats[1]} height={{ xs: 200, sm: 240, md: 244 }} index={1} />
-            </Box>
-          )}
-
-          {/* Cat 2 — top-right second */}
-          {cats[2] && (
-            <Box sx={{ gridColumn: { xs: '2 / 3', md: '3 / 4' }, gridRow: { md: '1 / 2' } }}>
-              <CategoryCard category={cats[2]} height={{ xs: 200, sm: 240, md: 244 }} index={2} />
-            </Box>
-          )}
-
-          {/* Cat 3 — bottom-right first */}
-          {cats[3] && (
-            <Box sx={{ gridColumn: { xs: '1 / 2', md: '2 / 3' }, gridRow: { md: '2 / 3' } }}>
-              <CategoryCard category={cats[3]} height={{ xs: 180, sm: 210, md: 244 }} index={3} />
-            </Box>
-          )}
-
-          {/* Cat 4 — bottom-right second */}
-          {cats[4] && (
-            <Box sx={{ gridColumn: { xs: '2 / 3', md: '3 / 4' }, gridRow: { md: '2 / 3' } }}>
-              <CategoryCard category={cats[4]} height={{ xs: 180, sm: 210, md: 244 }} index={4} />
-            </Box>
-          )}
-
-          {/* Cat 5 — full-width footer row */}
-          {cats[5] && (
-            <Box sx={{ gridColumn: { xs: '1 / 3', md: '1 / 4' }, gridRow: { md: '3 / 4' } }}>
-              <CategoryCard category={cats[5]} height={{ xs: 160, sm: 180, md: 170 }} index={5} wide />
-            </Box>
-          )}
-
         </Box>
       </Container>
     </Box>
-  );
-}
-
-// ── Individual card ───────────────────────────────────────────────
-function CategoryCard({
-  category, height, minHeight, index, featured = false, wide = false,
-}: {
-  category: Category;
-  height: any;
-  minHeight?: any;
-  index: number;
-  featured?: boolean;
-  wide?: boolean;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 18 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.07, duration: 0.5 }}
-      style={{ height: '100%' }}
-    >
-      <Link href={`/category/${category.slug}`} style={{ textDecoration: 'none', display: 'block', height: '100%' }}>
-        <Box
-          sx={{
-            position: 'relative',
-            height,
-            minHeight,
-            overflow: 'hidden',
-            cursor: 'pointer',
-            '&:hover .cat-img': { transform: 'scale(1.08)' },
-            '&:hover .cat-reveal': { opacity: 1, transform: 'translateY(0)' },
-            '&:hover .cat-overlay': { opacity: 0.85 },
-          }}
-        >
-          {/* Background */}
-          {category.image ? (
-            <Image
-              src={category.image}
-              alt={category.name}
-              fill
-              className="cat-img"
-              style={{ objectFit: 'cover', transition: 'transform 0.75s cubic-bezier(0.25, 0.46, 0.45, 0.94)' }}
-              sizes="(max-width: 768px) 50vw, 33vw"
-            />
-          ) : (
-            <Box sx={{ position: 'absolute', inset: 0, background: DARK_GRADIENTS[index % DARK_GRADIENTS.length] }} />
-          )}
-
-          {/* Bottom gradient overlay */}
-          <Box
-            className="cat-overlay"
-            sx={{
-              position: 'absolute', inset: 0,
-              background: wide
-                ? 'linear-gradient(to right, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.1) 100%)'
-                : 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.0) 100%)',
-              transition: 'opacity 0.4s',
-            }}
-          />
-
-          {/* Top accent line */}
-          <Box sx={{
-            position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
-            background: 'linear-gradient(to right, #c9a84c, transparent)',
-            opacity: 0.6,
-          }} />
-
-          {/* Content */}
-          <Box sx={{
-            position: 'absolute',
-            ...(wide
-              ? { left: 0, top: '50%', transform: 'translateY(-50%)', p: { xs: 2.5, md: 4 } }
-              : { bottom: 0, left: 0, right: 0, p: featured ? { xs: 2.5, md: 3.5 } : { xs: 1.75, md: 2.5 } }),
-          }}>
-            {/* Category label */}
-            <Typography sx={{
-              fontSize: '0.6rem',
-              fontWeight: 700,
-              letterSpacing: '0.18em',
-              textTransform: 'uppercase',
-              color: '#c9a84c',
-              display: 'block',
-              mb: 0.6,
-            }}>
-              Collection
-            </Typography>
-
-            {/* Name */}
-            <Typography sx={{
-              color: 'white',
-              fontFamily: 'var(--font-playfair)',
-              fontWeight: 700,
-              fontSize: featured
-                ? { xs: '1.2rem', sm: '1.6rem', md: '2rem' }
-                : wide
-                  ? { xs: '1.1rem', md: '1.4rem' }
-                  : { xs: '0.9rem', sm: '1rem', md: '1.15rem' },
-              lineHeight: 1.2,
-              mb: 0.5,
-              textShadow: '0 2px 12px rgba(0,0,0,0.5)',
-            }}>
-              {category.name}
-            </Typography>
-
-            {/* Product count */}
-            {category._count && (
-              <Typography sx={{
-                color: 'rgba(255,255,255,0.5)',
-                fontSize: featured ? '0.72rem' : '0.62rem',
-                fontWeight: 500,
-                mb: featured ? 2 : 0,
-              }}>
-                {category._count.products} products
-              </Typography>
-            )}
-
-            {/* Reveal CTA — appears on hover */}
-            <Box
-              className="cat-reveal"
-              sx={{
-                mt: featured ? 0 : 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 1,
-                color: 'white',
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                opacity: 0,
-                transform: 'translateY(8px)',
-                transition: 'all 0.32s ease',
-                borderBottom: '1px solid #c9a84c',
-                pb: 0.25,
-              }}
-            >
-              Shop now
-              <Box component="span" sx={{ fontSize: '0.85rem', lineHeight: 1 }}>→</Box>
-            </Box>
-          </Box>
-        </Box>
-      </Link>
-    </motion.div>
   );
 }

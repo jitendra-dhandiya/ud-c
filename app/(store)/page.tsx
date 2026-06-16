@@ -28,7 +28,7 @@ async function getProducts(type: string) {
 
 async function getCategories() {
   try {
-    const res = await fetch(`${API}/categories/featured`, { cache: 'no-store' });
+    const res = await fetch(`${API}/categories/home`, { cache: 'no-store' });
     if (!res.ok) return [];
     return (await res.json()).data || [];
   } catch { return []; }

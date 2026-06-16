@@ -200,7 +200,7 @@ export default function GenderHomePage({ sections, initialData }: Props) {
         );
       case 'FEATURED_CATEGORIES':
       case 'CATEGORY_SHOWCASE':
-        return <CategoryShowcase key={section.id} categories={initialData.categories} />;
+        return <CategoryShowcase key={section.id} initialCategories={initialData.categories} />;
       case 'PROMOTIONAL_BANNERS':
       case 'CUSTOM_BANNER':
         return <PromoBanners key={section.id} banners={promoBanners} title={title} />;
@@ -262,7 +262,7 @@ export default function GenderHomePage({ sections, initialData }: Props) {
       </Box>
 
       {/* 7. Category grid */}
-      <CategoryShowcase categories={initialData.categories} />
+      <CategoryShowcase initialCategories={initialData.categories} />
 
       {/* 8. Best Sellers carousel */}
       <Box sx={{ opacity: fetching ? 0.5 : 1, transition: 'opacity 0.25s' }}>

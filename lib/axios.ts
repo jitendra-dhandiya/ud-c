@@ -85,7 +85,8 @@ api.interceptors.response.use(
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+          // Fire event — LoginModal listens and opens itself
+          window.dispatchEvent(new CustomEvent('auth:required'));
         }
         return Promise.reject(error);
       } finally {

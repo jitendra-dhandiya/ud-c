@@ -93,7 +93,7 @@ export default function ProductDetailClient({ product }: Props) {
               {/* Main image */}
               <Box
                 sx={{
-                  position: 'relative', paddingTop: '125%', borderRadius: 2,
+                  position: 'relative', paddingTop: '133%', borderRadius: 2,
                   overflow: 'hidden', bgcolor: '#f8f8f8', mb: 1.5,
                 }}
               >
@@ -132,7 +132,7 @@ export default function ProductDetailClient({ product }: Props) {
                       key={img.id}
                       onClick={() => setSelectedImage(i)}
                       sx={{
-                        position: 'relative', width: 64, height: 80, borderRadius: 1,
+                        position: 'relative', width: 64, height: 85, borderRadius: 1,
                         overflow: 'hidden', cursor: 'pointer', bgcolor: '#f8f8f8',
                         border: '2px solid', borderColor: i === selectedImage ? '#1a1a1a' : 'transparent',
                         transition: 'border-color 0.2s',

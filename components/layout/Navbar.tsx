@@ -18,8 +18,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '../../store';
 import { toggleCart } from '../../store/slices/cartSlice';
 import { setGender, type GenderType } from '../../store/slices/genderSlice';
+import { openLoginModal } from '../../store/slices/uiSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { productApi } from '../../services/api.service';
+import { MegaMenuDesktop, MegaMenuMobile, type NavCategory } from './MegaMenu';
 
 const NAV_LINKS = [
   { label: 'New In', href: '/shop?isNewArrival=true' },
@@ -31,9 +33,10 @@ const NAV_LINKS = [
 
 interface NavbarProps {
   settings?: Record<string, string>;
+  navCategories?: NavCategory[];
 }
 
-export default function Navbar({ settings = {} }: NavbarProps) {
+export default function Navbar({ settings = {}, navCategories = [] }: NavbarProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const router = useRouter();
@@ -219,7 +222,7 @@ export default function Navbar({ settings = {} }: NavbarProps) {
 
             {/* Desktop nav links */}
             {!isMobile && (
-              <Box sx={{ display: 'flex', gap: 0.5, flexGrow: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 0, flexGrow: 1, height: '100%' }}>
                 {NAV_LINKS.map((link) => (
                   <Button
                     key={link.href}
@@ -232,13 +235,18 @@ export default function Navbar({ settings = {} }: NavbarProps) {
                       letterSpacing: '0.06em',
                       textTransform: 'uppercase',
                       px: 1.5,
-                      '&:hover': { color: 'secondary.main', bgcolor: 'transparent' },
-                      transition: 'color 0.2s',
+                      borderRadius: 0,
+                      borderBottom: '2px solid transparent',
+                      '&:hover': { color: '#1a1a1a', bgcolor: 'transparent', borderBottomColor: '#1a1a1a' },
+                      transition: 'color 0.2s, border-color 0.2s',
                     }}
                   >
                     {link.label}
                   </Button>
                 ))}
+                {navCategories.length > 0 && (
+                  <MegaMenuDesktop categories={navCategories} />
+                )}
               </Box>
             )}
 
@@ -291,7 +299,7 @@ export default function Navbar({ settings = {} }: NavbarProps) {
                   </Menu>
                 </>
               ) : (
-                <IconButton component={Link} href="/login" size="small">
+                <IconButton size="small" onClick={() => dispatch(openLoginModal())}>
                   <PersonOutline fontSize="small" />
                 </IconButton>
               )}
@@ -486,23 +494,34 @@ export default function Navbar({ settings = {} }: NavbarProps) {
           <List>
             {NAV_LINKS.map((link) => (
               <ListItem key={link.href} component={Link} href={link.href} onClick={() => setMobileOpen(false)}
-                sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
+                sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { bgcolor: '#f5f5f5' } }}>
                 <ListItemText
                   primary={link.label}
-                  primaryTypographyProps={{ fontWeight: 500, fontSize: '0.9rem', letterSpacing: '0.04em' }}
+                  primaryTypographyProps={{ fontWeight: 500, fontSize: '0.9rem', letterSpacing: '0.04em', color: '#1a1a1a' }}
                 />
               </ListItem>
             ))}
+            {navCategories.length > 0 && (
+              <>
+                <Divider sx={{ my: 0.5 }} />
+                <Box sx={{ px: 2, py: 0.75 }}>
+                  <Typography variant="overline" sx={{ fontSize: '0.6rem', letterSpacing: '0.15em', color: '#aaa' }}>
+                    Shop by Category
+                  </Typography>
+                </Box>
+                <MegaMenuMobile categories={navCategories} onLinkClick={() => setMobileOpen(false)} />
+              </>
+            )}
             <Divider sx={{ my: 1 }} />
             {isAuthenticated ? (
               <>
                 <ListItem component={Link} href="/account/orders" onClick={() => setMobileOpen(false)}
-                  sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
-                  <ListItemText primary="My Orders" />
+                  sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { bgcolor: '#f5f5f5' } }}>
+                  <ListItemText primary="My Orders" primaryTypographyProps={{ color: '#1a1a1a', fontWeight: 500, fontSize: '0.9rem' }} />
                 </ListItem>
                 <ListItem component={Link} href="/account/profile" onClick={() => setMobileOpen(false)}
-                  sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
-                  <ListItemText primary="Profile" />
+                  sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { bgcolor: '#f5f5f5' } }}>
+                  <ListItemText primary="Profile" primaryTypographyProps={{ color: '#1a1a1a', fontWeight: 500, fontSize: '0.9rem' }} />
                 </ListItem>
                 <ListItem onClick={() => { setMobileOpen(false); setLogoutConfirm(true); }}
                   sx={{ '&:hover': { bgcolor: '#fff5f5' }, cursor: 'pointer' }}>
@@ -511,12 +530,16 @@ export default function Navbar({ settings = {} }: NavbarProps) {
               </>
             ) : (
               <>
-                <ListItem component={Link} href="/login" onClick={() => setMobileOpen(false)}
-                  sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
+                <ListItem
+                  onClick={() => { setMobileOpen(false); dispatch(openLoginModal()); }}
+                  sx={{ '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
+                >
                   <ListItemText primary="Login" />
                 </ListItem>
-                <ListItem component={Link} href="/register" onClick={() => setMobileOpen(false)}
-                  sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
+                <ListItem
+                  onClick={() => { setMobileOpen(false); dispatch(openLoginModal()); }}
+                  sx={{ '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
+                >
                   <ListItemText primary="Register" />
                 </ListItem>
               </>
