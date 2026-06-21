@@ -103,7 +103,7 @@ export default function CheckoutPage() {
 
       const { load } = await import('@cashfreepayments/cashfree-js');
       const cashfree = await load({
-        mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === 'production' ? 'production' : 'sandbox',
+        mode:'production',
       });
       await cashfree.checkout({ paymentSessionId, redirectTarget: '_modal' });
 
