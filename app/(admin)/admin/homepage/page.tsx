@@ -136,7 +136,7 @@ function MarqueeEditor({ config, onChange }: MarqueeEditorProps) {
               <span>{item.text}</span>
               {i < Math.min(2, items.length - 1) && sep !== 'none' && (
                 <Box component="span" sx={{ color: '#c9a84c', mx: 0.5 }}>
-                  {{ diamond: '◆', dot: '•', star: '★', slash: '/', line: '|' }[sep] || '◆'}
+                  {{ diamond: '◆', dot: '•', star: '★', slash: '/', line: '|' }[sep as 'diamond' | 'dot' | 'star' | 'slash' | 'line'] || '◆'}
                 </Box>
               )}
             </Box>
