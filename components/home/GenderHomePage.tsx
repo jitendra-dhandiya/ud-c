@@ -10,6 +10,7 @@ import CategoryShowcase from './CategoryShowcase';
 import TestimonialsSection from './TestimonialsSection';
 import PromoBanners from './PromoBanners';
 import StoreLocations from './StoreLocations';
+import MarqueeStrip from './MarqueeStrip';
 import { productApi, bannerApi } from '../../services/api.service';
 
 // ── Promo strip ────────────────────────────────────────────────
@@ -208,6 +209,8 @@ export default function GenderHomePage({ sections, initialData }: Props) {
         return <TestimonialsSection key={section.id} testimonials={initialData.testimonials} />;
       case 'STORE_LOCATOR':
         return <StoreLocations key={section.id} stores={initialData.stores} title={title} subtitle={section.subtitle} />;
+      case 'MARQUEE':
+        return <MarqueeStrip key={section.id} config={section.config || {}} />;
       default:
         return null;
     }

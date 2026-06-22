@@ -93,28 +93,14 @@ export default function CheckoutPage() {
     document.body.appendChild(s);
   });
 
-  // ── Cashfree drop-in ───────────────────────────────────────────
-  const openCashfreeModal = async (orderId: string, orderNumber: string) => {
-    setPayStatus('processing');
-    try {
-      const { data: cfRes } = await paymentApi.createCashfreeOrder(orderId);
-      const { paymentSessionId } = (cfRes as any).data;
-      if (!paymentSessionId) throw new Error('No payment session ID returned');
-
-      const { load } = await import('@cashfreepayments/cashfree-js');
-      const cashfree = await load({
-        mode:'production',
-      });
-      await cashfree.checkout({ paymentSessionId, redirectTarget: '_modal' });
-
-      setPayStatus('processing');
-      await pollPaymentStatus(orderId, orderNumber);
-    } catch (err: any) {
-      console.error('Cashfree error:', err);
-      setPayStatus('failed');
-    }
+  // ── Shared Cashfree loader ─────────────────────────────────────
+  const loadCashfreeSDK = async (sessionId: string) => {
+    const { load } = await import('@cashfreepayments/cashfree-js');
+    const cashfree = await load({ mode: 'production' });
+    await cashfree.checkout({ paymentSessionId: sessionId, redirectTarget: '_modal' });
   };
 
+  // ── Poll for full-payment status ──────────────────────────────
   const pollPaymentStatus = useCallback(async (orderId: string, orderNumber: string) => {
     const MAX = 6;
     for (let i = 0; i < MAX; i++) {
@@ -136,6 +122,61 @@ export default function CheckoutPage() {
     setPayStatus('pending');
   }, [clearCart]);
 
+  // ── Poll for COD delivery-deposit status ──────────────────────
+  const pollCodDepositStatus = useCallback(async (orderId: string, orderNumber: string) => {
+    const MAX = 6;
+    for (let i = 0; i < MAX; i++) {
+      await new Promise(r => setTimeout(r, i === 0 ? 1500 : 5000));
+      try {
+        const { data: s } = await paymentApi.getCashfreePaymentStatus(orderId);
+        const d = (s as any).data;
+        // deliveryChargePaid=true → deposit collected; order confirmed; product paid on delivery
+        if (d.deliveryChargePaid === true) {
+          await clearCart();
+          setSuccessOrder({ orderNumber, orderId });
+          setPayStatus('success');
+          return;
+        } else if (d.paymentStatus === 'FAILED') {
+          setPayStatus('failed');
+          return;
+        }
+      } catch { /* keep polling */ }
+    }
+    setPayStatus('pending');
+  }, [clearCart]);
+
+  // ── Open Cashfree modal for full payment ──────────────────────
+  const openCashfreeModal = async (orderId: string, orderNumber: string) => {
+    setPayStatus('processing');
+    try {
+      const { data: cfRes } = await paymentApi.createCashfreeOrder(orderId);
+      const { paymentSessionId } = (cfRes as any).data;
+      if (!paymentSessionId) throw new Error('No payment session ID returned');
+      await loadCashfreeSDK(paymentSessionId);
+      setPayStatus('processing');
+      await pollPaymentStatus(orderId, orderNumber);
+    } catch (err: any) {
+      console.error('Cashfree error:', err);
+      setPayStatus('failed');
+    }
+  };
+
+  // ── Open Cashfree modal for COD delivery deposit ──────────────
+  const openCashfreeCodDeposit = async (orderId: string, orderNumber: string) => {
+    setPayStatus('processing');
+    try {
+      const { data: cfRes } = await paymentApi.createCashfreeCodDeposit(orderId);
+      const { paymentSessionId } = (cfRes as any).data;
+      if (!paymentSessionId) throw new Error('No deposit session ID returned');
+      await loadCashfreeSDK(paymentSessionId);
+      setPayStatus('processing');
+      await pollCodDepositStatus(orderId, orderNumber);
+    } catch (err: any) {
+      console.error('COD deposit error:', err);
+      setPayStatus('failed');
+    }
+  };
+
   // ── Place order ────────────────────────────────────────────────
   const handlePlaceOrder = async (shippingAddress: object) => {
     if (!cart?.items.length) { toast.error('Your cart is empty'); return; }
@@ -156,10 +197,9 @@ export default function CheckoutPage() {
       });
       const order = orderData.data;
 
-      // COD — no payment gateway
+      // COD — collect delivery charge upfront via Cashfree, product paid on delivery
       if (paymentMethod === 'COD') {
-        await clearCart();
-        router.push(`/order-success?orderNumber=${order.orderNumber}`);
+        await openCashfreeCodDeposit(order.id, order.orderNumber);
         return;
       }
 
@@ -470,15 +510,15 @@ export default function CheckoutPage() {
                   {shippingMethod === 'COD' && (
                     <Card elevation={0} sx={{ border: '1px solid #ed6c02', borderRadius: 2, mb: 3, bgcolor: '#fff8f0' }}>
                       <CardContent sx={{ p: 2.5 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Payments sx={{ color: '#ed6c02', fontSize: 22 }} />
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                          <Payments sx={{ color: '#ed6c02', fontSize: 22, mt: 0.2 }} />
                           <Box>
                             <Typography variant="body2" fontWeight={700} color="#ed6c02">
-                              Cash on Delivery
+                              Pay Delivery Charge Online · Pay Products on Delivery
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              Pay ₹{selectedShipping.charge} at delivery. A convenience fee is included.
-                              Save ₹{selectedShipping.charge - SHIPPING_METHODS[0].charge} by switching to Standard + Pay Online.
+                            <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.5 }}>
+                              You pay <strong>₹{selectedShipping.charge} now</strong> (delivery charge) via UPI / Card / Net Banking.
+                              The remaining <strong>{formatPrice(subtotal - couponDiscount)}</strong> is paid in cash when your order arrives.
                             </Typography>
                           </Box>
                         </Box>
@@ -498,7 +538,7 @@ export default function CheckoutPage() {
                     {loading
                       ? <CircularProgress size={20} sx={{ color: 'white' }} />
                       : shippingMethod === 'COD'
-                        ? `Place Order — ${formatPrice(total)} (Pay on Delivery)`
+                        ? `Pay Delivery ₹${selectedShipping.charge} & Place Order`
                         : `Place Order & Pay — ${formatPrice(total)}`
                     }
                   </Button>

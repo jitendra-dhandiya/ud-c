@@ -100,6 +100,8 @@ export const paymentApi = {
   // Cashfree
   createCashfreeOrder: (orderId: string) =>
     api.post('/payments/cashfree/create', { orderId }),
+  createCashfreeCodDeposit: (orderId: string) =>
+    api.post('/payments/cashfree/cod-deposit', { orderId }),
   getCashfreePaymentStatus: (orderId: string) =>
     api.get(`/payments/cashfree/status/${orderId}`),
 };

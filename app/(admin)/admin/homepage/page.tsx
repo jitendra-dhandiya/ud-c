@@ -4,8 +4,12 @@ import {
   Box, Typography, Button, Card, CardContent, Switch, IconButton,
   Chip, Skeleton, TextField, Dialog, DialogTitle, DialogContent,
   DialogActions, Stack, MenuItem, Select, FormControl, InputLabel,
+  Divider, Tooltip, ToggleButtonGroup, ToggleButton, Slider,
 } from '@mui/material';
-import { Edit, ExpandMore, ExpandLess, DragIndicator, Add, Delete } from '@mui/icons-material';
+import {
+  Edit, ExpandMore, ExpandLess, DragIndicator, Add, Delete,
+  AddCircleOutline, RemoveCircleOutline, Speed, Palette,
+} from '@mui/icons-material';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, DragEndEvent, DragOverlay, DragStartEvent,
@@ -40,6 +44,7 @@ const SECTION_LABELS: Record<string, string> = {
   INSTAGRAM_FEED: 'Instagram Feed',
   CUSTOM_BANNER: 'Custom Banner',
   STORE_LOCATOR: 'Store Locations',
+  MARQUEE: 'Marquee / Ticker',
 };
 
 // Section types available when adding a new section
@@ -57,7 +62,267 @@ const ADDABLE_SECTIONS = [
   { type: 'TESTIMONIALS',         label: 'Testimonials',          desc: 'Customer reviews & ratings' },
   { type: 'STORE_LOCATOR',        label: 'Store Locations',       desc: '"Visit Our Stores" section with map links' },
   { type: 'NEWSLETTER',           label: 'Newsletter Signup',     desc: 'Email subscription form' },
+  { type: 'MARQUEE',             label: 'Marquee / Ticker',      desc: 'Scrolling announcement strip with admin-controlled messages' },
 ];
+
+// ── Marquee config editor ──────────────────────────────────────
+const SEPARATOR_OPTIONS = [
+  { value: 'diamond', label: '◆ Diamond' },
+  { value: 'dot',     label: '• Dot' },
+  { value: 'star',    label: '★ Star' },
+  { value: 'slash',   label: '/ Slash' },
+  { value: 'line',    label: '| Line' },
+  { value: 'none',    label: 'None' },
+];
+
+const VARIANT_OPTIONS = [
+  { value: 'dark',   label: 'Dark', bg: '#1a1a1a', text: '#fff' },
+  { value: 'light',  label: 'Light', bg: '#f5f5f5', text: '#1a1a1a' },
+  { value: 'gold',   label: 'Gold', bg: '#c9a84c', text: '#1a1a1a' },
+  { value: 'accent', label: 'Accent', bg: '#0d0d0d', text: '#c9a84c' },
+];
+
+interface MarqueeItem { text: string; icon: string; link: string; }
+
+interface MarqueeEditorProps {
+  config: any;
+  onChange: (config: any) => void;
+}
+
+function MarqueeEditor({ config, onChange }: MarqueeEditorProps) {
+  const items: MarqueeItem[] = config.items || [
+    { text: 'Free Shipping on Orders Above ₹999', icon: '🚚', link: '' },
+    { text: '7-Day Easy Returns', icon: '↩', link: '' },
+    { text: 'New Arrivals Every Week', icon: '✨', link: '' },
+  ];
+  const speed    = config.speed    ?? 35;
+  const variant  = config.variant  || 'dark';
+  const sep      = config.separatorStyle || 'diamond';
+  const uppercase = config.uppercase !== false;
+
+  const update = (patch: Record<string, any>) => onChange({ ...config, ...patch });
+
+  const updateItem = (i: number, patch: Partial<MarqueeItem>) => {
+    const next = items.map((it, idx) => idx === i ? { ...it, ...patch } : it);
+    update({ items: next });
+  };
+
+  const addItem = () => update({ items: [...items, { text: 'New announcement', icon: '✨', link: '' }] });
+
+  const removeItem = (i: number) => update({ items: items.filter((_, idx) => idx !== i) });
+
+  const selectedVariant = VARIANT_OPTIONS.find(v => v.value === variant) || VARIANT_OPTIONS[0];
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+
+      {/* Live preview */}
+      <Box>
+        <Typography variant="caption" fontWeight={700} sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+          LIVE PREVIEW
+        </Typography>
+        <Box sx={{
+          bgcolor: selectedVariant.bg,
+          color: selectedVariant.text,
+          py: 1.25, px: 3, borderRadius: 1,
+          overflow: 'hidden', whiteSpace: 'nowrap',
+          fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.09em',
+          textTransform: uppercase ? 'uppercase' : 'none',
+          display: 'flex', gap: 3, alignItems: 'center',
+        }}>
+          {items.slice(0, 3).map((item, i) => (
+            <Box key={i} component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+              {item.icon && <span>{item.icon}</span>}
+              <span>{item.text}</span>
+              {i < Math.min(2, items.length - 1) && sep !== 'none' && (
+                <Box component="span" sx={{ color: '#c9a84c', mx: 0.5 }}>
+                  {{ diamond: '◆', dot: '•', star: '★', slash: '/', line: '|' }[sep] || '◆'}
+                </Box>
+              )}
+            </Box>
+          ))}
+        </Box>
+      </Box>
+
+      <Divider />
+
+      {/* Items list */}
+      <Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+          <Typography variant="caption" fontWeight={700} sx={{ color: 'text.secondary' }}>
+            MESSAGES ({items.length})
+          </Typography>
+          <Button
+            size="small"
+            startIcon={<AddCircleOutline sx={{ fontSize: 16 }} />}
+            onClick={addItem}
+            sx={{ fontSize: '0.72rem', color: '#1a1a1a', fontWeight: 700 }}
+          >
+            Add Message
+          </Button>
+        </Box>
+
+        <Stack spacing={1.5}>
+          {items.map((item, i) => (
+            <Box key={i} sx={{
+              display: 'grid',
+              gridTemplateColumns: '44px 1fr auto',
+              gap: 1, alignItems: 'flex-start',
+              p: 1.5, borderRadius: 1.5,
+              border: '1px solid', borderColor: 'divider',
+              bgcolor: '#fafafa',
+            }}>
+              {/* Icon */}
+              <TextField
+                value={item.icon}
+                onChange={e => updateItem(i, { icon: e.target.value })}
+                size="small"
+                placeholder="🚚"
+                inputProps={{ style: { textAlign: 'center', fontSize: '1.1rem', padding: '6px 4px' } }}
+                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white' } }}
+              />
+              {/* Text + link */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                <TextField
+                  value={item.text}
+                  onChange={e => updateItem(i, { text: e.target.value })}
+                  size="small"
+                  placeholder="Message text..."
+                  fullWidth
+                  sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', fontSize: '0.82rem' } }}
+                />
+                <TextField
+                  value={item.link}
+                  onChange={e => updateItem(i, { link: e.target.value })}
+                  size="small"
+                  placeholder="Link URL (optional)"
+                  fullWidth
+                  sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'white', fontSize: '0.78rem' } }}
+                />
+              </Box>
+              {/* Remove */}
+              <Tooltip title="Remove">
+                <IconButton
+                  size="small"
+                  onClick={() => removeItem(i)}
+                  disabled={items.length <= 1}
+                  sx={{ color: 'error.main', mt: 0.25 }}
+                >
+                  <RemoveCircleOutline sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          ))}
+        </Stack>
+      </Box>
+
+      <Divider />
+
+      {/* Appearance */}
+      <Box>
+        <Typography variant="caption" fontWeight={700} sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
+          APPEARANCE
+        </Typography>
+
+        <Stack spacing={2.5}>
+          {/* Variant */}
+          <Box>
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+              Colour Theme
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {VARIANT_OPTIONS.map(v => (
+                <Box
+                  key={v.value}
+                  onClick={() => update({ variant: v.value })}
+                  sx={{
+                    px: 2, py: 0.75, borderRadius: 1, cursor: 'pointer',
+                    bgcolor: v.bg, color: v.text,
+                    fontSize: '0.72rem', fontWeight: 700,
+                    border: '2px solid',
+                    borderColor: variant === v.value ? 'primary.main' : 'transparent',
+                    outline: variant === v.value ? '1px solid' : 'none',
+                    outlineColor: 'primary.main',
+                    userSelect: 'none',
+                  }}
+                >
+                  {v.label}
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          {/* Separator */}
+          <Box>
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+              Item Separator
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {SEPARATOR_OPTIONS.map(s => (
+                <Box
+                  key={s.value}
+                  onClick={() => update({ separatorStyle: s.value })}
+                  sx={{
+                    px: 1.5, py: 0.5, borderRadius: 1, cursor: 'pointer',
+                    border: '1px solid',
+                    borderColor: sep === s.value ? '#1a1a1a' : 'divider',
+                    bgcolor: sep === s.value ? '#1a1a1a' : 'white',
+                    color: sep === s.value ? 'white' : 'text.secondary',
+                    fontSize: '0.72rem', fontWeight: 600,
+                    userSelect: 'none',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {s.label}
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          {/* Speed */}
+          <Box>
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+              Scroll Speed — <strong>{speed}s</strong> per cycle
+              <Typography component="span" variant="caption" sx={{ color: '#aaa', ml: 1 }}>
+                (lower = faster)
+              </Typography>
+            </Typography>
+            <Box sx={{ px: 1 }}>
+              <Slider
+                value={speed}
+                min={10}
+                max={80}
+                step={5}
+                marks={[
+                  { value: 10, label: 'Fast' },
+                  { value: 45, label: 'Normal' },
+                  { value: 80, label: 'Slow' },
+                ]}
+                onChange={(_, val) => update({ speed: val as number })}
+                sx={{
+                  color: '#1a1a1a',
+                  '& .MuiSlider-markLabel': { fontSize: '0.65rem' },
+                }}
+              />
+            </Box>
+          </Box>
+
+          {/* Uppercase toggle */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Switch
+              size="small"
+              checked={uppercase}
+              onChange={e => update({ uppercase: e.target.checked })}
+            />
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+              UPPERCASE TEXT
+            </Typography>
+          </Box>
+        </Stack>
+      </Box>
+    </Box>
+  );
+}
 
 // ── Sortable card ─────────────────────────────────────────────
 function SortableSectionCard({
@@ -339,17 +604,27 @@ export default function HomepageBuilderPage() {
     }
   };
 
+  // parsed config object used by MarqueeEditor (avoids JSON textarea for MARQUEE)
+  const [marqueeConfig, setMarqueeConfig] = useState<any>({});
+
   // ── Edit / save config ─────────────────────────────────────
   const openEdit = (section: any) => {
     setEditSection(section);
-    setConfigStr(section.config ? JSON.stringify(section.config, null, 2) : '{}');
+    const cfg = section.config || {};
+    if (section.type === 'MARQUEE') {
+      setMarqueeConfig(cfg);
+    } else {
+      setConfigStr(JSON.stringify(cfg, null, 2));
+    }
   };
 
   const saveConfig = async () => {
     if (!editSection) return;
     setSaving(true);
     try {
-      const config = JSON.parse(configStr);
+      const config = editSection.type === 'MARQUEE'
+        ? marqueeConfig
+        : JSON.parse(configStr);
       await homepageApi.updateSection(editSection.id, {
         title: editSection.title,
         subtitle: editSection.subtitle,
@@ -497,34 +772,70 @@ export default function HomepageBuilderPage() {
       </Dialog>
 
       {/* Edit section dialog */}
-      <Dialog open={!!editSection} onClose={() => setEditSection(null)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700 }}>
-          Edit: {editSection ? (SECTION_LABELS[editSection.type] || editSection.type) : ''}
+      <Dialog
+        open={!!editSection}
+        onClose={() => setEditSection(null)}
+        maxWidth={editSection?.type === 'MARQUEE' ? 'md' : 'sm'}
+        fullWidth
+        PaperProps={{ sx: { maxHeight: '90vh' } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, borderBottom: '1px solid', borderColor: 'divider', pb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Typography variant="h6" fontWeight={700}>
+              Edit: {editSection ? (SECTION_LABELS[editSection.type] || editSection.type) : ''}
+            </Typography>
+            <Chip
+              label={editSection?.type}
+              size="small"
+              sx={{ fontSize: '0.6rem', height: 18, bgcolor: '#f0f0f0' }}
+            />
+          </Box>
         </DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-          <TextField
-            label="Section Title" size="small" fullWidth
-            value={editSection?.title || ''}
-            onChange={e => setEditSection((s: any) => ({ ...s, title: e.target.value }))}
-          />
-          <TextField
-            label="Subtitle" size="small" fullWidth
-            value={editSection?.subtitle || ''}
-            onChange={e => setEditSection((s: any) => ({ ...s, subtitle: e.target.value }))}
-          />
-          <TextField
-            label="Config (JSON)" multiline rows={8} size="small" fullWidth
-            value={configStr}
-            onChange={e => setConfigStr(e.target.value)}
-            inputProps={{ style: { fontFamily: 'monospace', fontSize: 12 } }}
-            helperText="Customize section behavior with JSON config"
-          />
+
+        <DialogContent sx={{ pt: 2.5, pb: 1 }}>
+          <Stack spacing={2}>
+            {/* Title & subtitle — always shown */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+              <TextField
+                label="Section Title" size="small" fullWidth
+                value={editSection?.title || ''}
+                onChange={e => setEditSection((s: any) => ({ ...s, title: e.target.value }))}
+              />
+              <TextField
+                label="Subtitle" size="small" fullWidth
+                value={editSection?.subtitle || ''}
+                onChange={e => setEditSection((s: any) => ({ ...s, subtitle: e.target.value }))}
+              />
+            </Box>
+
+            <Divider />
+
+            {/* MARQUEE → visual editor; everything else → JSON textarea */}
+            {editSection?.type === 'MARQUEE' ? (
+              <MarqueeEditor config={marqueeConfig} onChange={setMarqueeConfig} />
+            ) : (
+              <TextField
+                label="Config (JSON)" multiline rows={8} size="small" fullWidth
+                value={configStr}
+                onChange={e => setConfigStr(e.target.value)}
+                inputProps={{ style: { fontFamily: 'monospace', fontSize: 12 } }}
+                helperText="Customize section behavior with JSON config"
+              />
+            )}
+          </Stack>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setEditSection(null)}>Cancel</Button>
-          <Button variant="contained" onClick={saveConfig} disabled={saving}
-            sx={{ bgcolor: '#1a1a1a', '&:hover': { bgcolor: '#333' } }}>
-            {saving ? 'Saving...' : 'Save'}
+
+        <DialogActions sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Button onClick={() => setEditSection(null)} sx={{ color: 'text.secondary' }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={saveConfig}
+            disabled={saving}
+            sx={{ bgcolor: '#1a1a1a', '&:hover': { bgcolor: '#333' }, fontWeight: 700, px: 3 }}
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -15,7 +15,7 @@ const FOOTER_LINKS = {
   'Help': [
     { label: 'FAQs', href: '/faq' },
     { label: 'Order Tracking', href: '/account/orders' },
-    { label: 'Return Policy', href: '/return-policy' },
+    { label: 'Return & Refund Policy', href: '/return-policy' },
     { label: 'Shipping Policy', href: '/shipping-policy' },
     { label: 'Contact Us', href: '/contact' },
   ],
@@ -198,14 +198,25 @@ export default function Footer({ settings = {} }: FooterProps) {
       <Container maxWidth="xl">
         <Box sx={{
           py: 2.5, display: 'flex', flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between', alignItems: 'center', gap: 1,
+          justifyContent: 'space-between', alignItems: 'center', gap: 2,
         }}>
           <Typography variant="caption" sx={{ color: '#555' }}>
             © {new Date().getFullYear()} {siteName}. All rights reserved.
           </Typography>
-          <Typography variant="caption" sx={{ color: '#555' }}>
-            Made with ♥ in India
-          </Typography>
+          <Box sx={{ display: 'flex', gap: 2.5, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {[
+              { label: 'Privacy Policy', href: '/privacy-policy' },
+              { label: 'Terms & Conditions', href: '/terms' },
+              { label: 'Return & Refund', href: '/return-policy' },
+              { label: 'Shipping Policy', href: '/shipping-policy' },
+            ].map((l) => (
+              <Link key={l.href} href={l.href} style={{ textDecoration: 'none' }}>
+                <Typography variant="caption" sx={{ color: '#555', '&:hover': { color: '#c9a84c' }, transition: 'color 0.2s' }}>
+                  {l.label}
+                </Typography>
+              </Link>
+            ))}
+          </Box>
         </Box>
       </Container>
     </Box>
