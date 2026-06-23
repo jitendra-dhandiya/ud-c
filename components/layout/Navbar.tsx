@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -43,6 +43,16 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
   const dispatch = useAppDispatch();
   const { itemCount } = useAppSelector((s) => s.cart);
   const gender = useAppSelector((s) => s.gender.selected);
+
+  // Strict gender filter for the mega menu:
+  // UNISEX → always visible; null/Unset → never visible; WOMEN/MEN → only when that gender is active
+  const filteredNavCategories = useMemo(() => {
+    return navCategories.filter(cat => {
+      if (cat.gender === 'UNISEX') return true;
+      if (!cat.gender) return false;
+      return cat.gender === gender;
+    });
+  }, [navCategories, gender]);
   const { user, isAuthenticated, logout, isAdmin } = useAuth();
 
   const handleGenderChange = (g: GenderType) => {
@@ -63,7 +73,7 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -169,16 +179,16 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
         position="sticky"
         elevation={0}
         sx={{
-          bgcolor: scrolled ? 'rgba(255,255,255,0.97)' : 'white',
-          backdropFilter: scrolled ? 'blur(10px)' : 'none',
+          bgcolor: scrolled ? 'rgba(255,255,255,0.98)' : 'white',
           color: 'text.primary',
           borderBottom: '1px solid',
           borderColor: 'divider',
-          transition: 'all 0.3s ease',
+          transition: 'background-color 0.25s ease, box-shadow 0.25s ease',
+          boxShadow: scrolled ? '0 2px 12px rgba(0,0,0,0.08)' : 'none',
         }}
       >
         <Container maxWidth="xl">
-          <Toolbar disableGutters sx={{ height: { xs: 60, md: 72 }, gap: 1 }}>
+          <Toolbar disableGutters sx={{ height: { xs: 64, md: 88 }, gap: 1 }}>
             {/* Mobile menu button */}
             {isMobile && (
               <IconButton onClick={() => setMobileOpen(true)} sx={{ ml: -1 }}>
@@ -187,35 +197,41 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
             )}
 
             {/* Logo */}
-            <Box sx={{ flexGrow: { xs: 1, md: 0 }, display: 'flex', justifyContent: { xs: 'center', md: 'flex-start' }, mr: { md: 4 } }}>
+            <Box sx={{ flexGrow: { xs: 1, md: 0 }, display: 'flex', justifyContent: { xs: 'center', md: 'flex-start' }, mr: { md: 5 } }}>
               <Link href="/" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
                 {settings.logo_url ? (
                   <Image
                     src={settings.logo_url}
                     alt={settings.site_name || 'Unique Dressup'}
-                    width={200}
-                    height={64}
+                    width={320}
+                    height={100}
                     style={{
                       objectFit: 'contain',
-                      height: isMobile ? 38 : 56,
+                      height: isMobile ? 48 : 72,
                       width: 'auto',
-                      maxWidth: isMobile ? 110 : 180,
+                      maxWidth: isMobile ? 160 : 260,
                     }}
                     priority
                   />
                 ) : (
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      fontFamily: 'var(--font-playfair)',
-                      fontWeight: 700,
-                      letterSpacing: '0.15em',
-                      color: '#1a1a1a',
-                      fontSize: { xs: '1.1rem', md: '1.5rem' },
-                    }}
-                  >
-                    {settings.site_name || 'Unique Dressup'}
-                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1 }}>
+                    <Typography
+                      sx={{
+                        fontFamily: 'var(--font-playfair)',
+                        fontWeight: 800,
+                        letterSpacing: '0.18em',
+                        color: '#1a1a1a',
+                        fontSize: { xs: '1.25rem', md: '1.8rem' },
+                        lineHeight: 1,
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {settings.site_name || 'Unique Dressup'}
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.52rem', letterSpacing: '0.35em', color: '#aaa', fontWeight: 600, textTransform: 'uppercase', mt: 0.5 }}>
+                      Fashion &amp; Lifestyle
+                    </Typography>
+                  </Box>
                 )}
               </Link>
             </Box>
@@ -244,8 +260,8 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
                     {link.label}
                   </Button>
                 ))}
-                {navCategories.length > 0 && (
-                  <MegaMenuDesktop categories={navCategories} />
+                {filteredNavCategories.length > 0 && (
+                  <MegaMenuDesktop categories={filteredNavCategories} />
                 )}
               </Box>
             )}
@@ -447,25 +463,29 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
       {/* Mobile Drawer */}
       <Drawer anchor="left" open={mobileOpen} onClose={() => setMobileOpen(false)}>
         <Box sx={{ width: 280 }}>
-          <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ px: 2.5, py: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
             {settings.logo_url ? (
               <Image
                 src={settings.logo_url}
                 alt={settings.site_name || 'Unique Dressup'}
-                width={160}
-                height={56}
-                style={{ objectFit: 'contain', height: 56, width: 'auto' }}
+                width={240}
+                height={80}
+                style={{ objectFit: 'contain', height: 52, width: 'auto', maxWidth: 160 }}
               />
             ) : (
-              <Typography variant="h6" sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 700 }}>
-                {settings.site_name || 'Unique Dressup'}
-              </Typography>
+              <Box>
+                <Typography sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 800, letterSpacing: '0.15em', fontSize: '1.15rem', textTransform: 'uppercase', lineHeight: 1 }}>
+                  {settings.site_name || 'Unique Dressup'}
+                </Typography>
+                <Typography sx={{ fontSize: '0.52rem', letterSpacing: '0.3em', color: '#aaa', fontWeight: 600, textTransform: 'uppercase', mt: 0.4 }}>
+                  Fashion &amp; Lifestyle
+                </Typography>
+              </Box>
             )}
-            <IconButton onClick={() => setMobileOpen(false)}>
+            <IconButton onClick={() => setMobileOpen(false)} sx={{ ml: 1 }}>
               <Close />
             </IconButton>
           </Box>
-          <Divider />
           {/* Gender toggle in mobile drawer */}
           {genderToggleEnabled && (
             <Box sx={{ display: 'flex', borderBottom: '1px solid', borderColor: 'divider' }}>
@@ -501,7 +521,7 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
                 />
               </ListItem>
             ))}
-            {navCategories.length > 0 && (
+            {filteredNavCategories.length > 0 && (
               <>
                 <Divider sx={{ my: 0.5 }} />
                 <Box sx={{ px: 2, py: 0.75 }}>
@@ -509,7 +529,7 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
                     Shop by Category
                   </Typography>
                 </Box>
-                <MegaMenuMobile categories={navCategories} onLinkClick={() => setMobileOpen(false)} />
+                <MegaMenuMobile categories={filteredNavCategories} onLinkClick={() => setMobileOpen(false)} />
               </>
             )}
             <Divider sx={{ my: 1 }} />

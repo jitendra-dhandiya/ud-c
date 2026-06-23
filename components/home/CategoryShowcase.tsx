@@ -1,13 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Box, Container, Typography, ButtonBase } from '@mui/material';
+import { Box, Container, Typography } from '@mui/material';
 import { motion } from 'framer-motion';
-import { categoryApi } from '../../services/api.service';
-
-const GENDER_TABS = ['ALL', 'WOMEN', 'MEN'] as const;
-type GenderTab = typeof GENDER_TABS[number];
 
 const FALLBACK_COLORS = [
   '#0d0d1a', '#0a1a0d', '#1a0a0a', '#0d0a1a', '#1a1a0a', '#0a0d1a',
@@ -27,19 +22,9 @@ interface Props {
 }
 
 export default function CategoryShowcase({ initialCategories = [] }: Props) {
-  const [categories, setCategories] = useState<HomeCategory[]>(initialCategories);
-  const [tab, setTab] = useState<GenderTab>('ALL');
-  const [loading, setLoading] = useState(false);
+  const categories = initialCategories;
 
-  useEffect(() => {
-    setLoading(true);
-    categoryApi.getHomeCategories(tab === 'ALL' ? undefined : tab)
-      .then(({ data }) => setCategories((data as any).data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [tab]);
-
-  if (!loading && categories.length === 0 && initialCategories.length === 0) return null;
+  if (categories.length === 0) return null;
 
   return (
     <Box sx={{ py: { xs: 7, md: 11 }, bgcolor: '#fff' }}>
@@ -83,30 +68,6 @@ export default function CategoryShowcase({ initialCategories = [] }: Props) {
             </Typography>
           </Box>
 
-          {/* ── Gender tabs ────────────────────────────────────────── */}
-          <Box sx={{ display: 'flex', gap: 0, mb: { xs: 3, md: 5 }, borderBottom: '2px solid #f0f0f0' }}>
-            {GENDER_TABS.map((g) => (
-              <ButtonBase
-                key={g}
-                onClick={() => setTab(g)}
-                sx={{
-                  px: { xs: 2, md: 3.5 },
-                  py: 1.25,
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  color: tab === g ? '#111' : '#aaa',
-                  borderBottom: tab === g ? '2px solid #111' : '2px solid transparent',
-                  mb: '-2px',
-                  transition: 'all 0.2s',
-                  '&:hover': { color: '#111' },
-                }}
-              >
-                {g}
-              </ButtonBase>
-            ))}
-          </Box>
         </motion.div>
 
         {/* ── Grid ───────────────────────────────────────────────── */}
@@ -115,8 +76,6 @@ export default function CategoryShowcase({ initialCategories = [] }: Props) {
             display: 'grid',
             gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
             gap: { xs: 1.5, md: 2 },
-            opacity: loading ? 0.55 : 1,
-            transition: 'opacity 0.2s',
           }}
         >
           {categories.map((cat, i) => (
@@ -134,6 +93,7 @@ export default function CategoryShowcase({ initialCategories = [] }: Props) {
                     aspectRatio: '4 / 5',
                     overflow: 'hidden',
                     cursor: 'pointer',
+                    borderRadius: { xs: '10px', md: '14px' },
                     bgcolor: FALLBACK_COLORS[i % FALLBACK_COLORS.length],
                     '&:hover .cat-img': { transform: 'scale(1.06)' },
                     '&:hover .cat-btn': { bgcolor: '#cc0000' },
@@ -151,76 +111,66 @@ export default function CategoryShowcase({ initialCategories = [] }: Props) {
                     />
                   )}
 
-                  {/* Dark gradient overlay */}
+                  {/* Dark overlay — heavier in center so text is readable */}
                   <Box sx={{
                     position: 'absolute', inset: 0,
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.3) 55%, rgba(0,0,0,0.08) 100%)',
+                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.72) 100%)',
                   }} />
 
-                  {/* Gender chip — top left */}
+                  {/* Gender badge — top left */}
                   {cat.gender && (
                     <Box sx={{
-                      position: 'absolute', top: 12, left: 12,
-                      bgcolor: 'rgba(0,0,0,0.72)',
-                      color: 'white',
+                      position: 'absolute', top: { xs: 10, md: 14 }, left: { xs: 10, md: 14 },
+                      bgcolor: 'white',
+                      color: '#111',
                       fontSize: '0.58rem',
                       fontWeight: 800,
-                      letterSpacing: '0.12em',
+                      letterSpacing: '0.1em',
                       textTransform: 'uppercase',
-                      px: 1.25, py: 0.4,
-                      border: '1px solid rgba(255,255,255,0.18)',
+                      px: 1.25, py: 0.5,
+                      borderRadius: '3px',
                     }}>
                       {cat.gender === 'WOMEN' ? 'WOMENS' : cat.gender === 'MEN' ? 'MENS' : cat.gender}
                     </Box>
                   )}
 
-                  {/* Bottom content */}
-                  <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: { xs: 1.75, md: 2.25 } }}>
-                    {/* "COLLECTION" label */}
-                    <Typography sx={{
-                      fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.2em',
-                      textTransform: 'uppercase', color: '#c9a84c', display: 'block', mb: 0.6,
-                    }}>
-                      Collection
-                    </Typography>
-
+                  {/* Centered content */}
+                  <Box sx={{
+                    position: 'absolute', inset: 0,
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center',
+                    px: { xs: 1.5, md: 2 },
+                    textAlign: 'center',
+                  }}>
                     {/* Category name */}
                     <Typography sx={{
                       color: '#FFE500',
                       fontWeight: 900,
-                      fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+                      fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' },
                       textTransform: 'uppercase',
-                      lineHeight: 1.15,
+                      lineHeight: 1.1,
                       letterSpacing: '-0.01em',
-                      mb: 0.5,
-                      textShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                      mb: { xs: 1.5, md: 2 },
+                      textShadow: '0 2px 12px rgba(0,0,0,0.6)',
                     }}>
                       {cat.name}
                     </Typography>
-
-                    {/* Product count */}
-                    {cat._count !== undefined && (
-                      <Typography sx={{
-                        color: 'rgba(255,255,255,0.55)', fontSize: '0.65rem', fontWeight: 500, mb: 1.5,
-                      }}>
-                        {cat._count.products} products
-                      </Typography>
-                    )}
 
                     {/* SHOP NOW button */}
                     <Box
                       className="cat-btn"
                       sx={{
-                        display: 'inline-block',
                         bgcolor: '#E53935',
                         color: 'white',
-                        fontSize: '0.6rem',
+                        fontSize: { xs: '0.58rem', md: '0.62rem' },
                         fontWeight: 800,
-                        letterSpacing: '0.1em',
+                        letterSpacing: '0.12em',
                         textTransform: 'uppercase',
-                        px: 1.75,
-                        py: 0.65,
+                        px: { xs: 2, md: 2.5 },
+                        py: { xs: 0.75, md: 0.85 },
+                        borderRadius: '3px',
                         transition: 'background-color 0.2s',
+                        display: 'inline-block',
                       }}
                     >
                       Shop Now
@@ -231,14 +181,6 @@ export default function CategoryShowcase({ initialCategories = [] }: Props) {
             </motion.div>
           ))}
 
-          {/* Empty state */}
-          {!loading && categories.length === 0 && (
-            <Box sx={{ gridColumn: '1 / -1', py: 8, textAlign: 'center' }}>
-              <Typography color="text.secondary" fontSize="0.875rem">
-                No categories available for this selection.
-              </Typography>
-            </Box>
-          )}
         </Box>
       </Container>
     </Box>

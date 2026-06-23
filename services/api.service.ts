@@ -204,6 +204,16 @@ export const blogApi = {
   delete: (id: string) => api.delete(`/blogs/${id}`),
 };
 
+// ─── Instagram Reels ──────────────────────────────────────────
+export const instagramReelsApi = {
+  getActive: () => api.get('/instagram-reels'),
+  getAll: () => api.get('/instagram-reels/admin'),
+  create: (data: object) => api.post('/instagram-reels', data),
+  update: (id: string, data: object) => api.put(`/instagram-reels/${id}`, data),
+  delete: (id: string) => api.delete(`/instagram-reels/${id}`),
+  reorder: (order: { id: string; sortOrder: number }[]) => api.patch('/instagram-reels/reorder', { order }),
+};
+
 // ─── Analytics ────────────────────────────────────────────────
 export const analyticsApi = {
   getDashboard: () => api.get('/analytics/dashboard'),

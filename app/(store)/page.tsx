@@ -42,8 +42,16 @@ async function getStores() {
   } catch { return []; }
 }
 
+async function getReels() {
+  try {
+    const res = await fetch(`${API}/instagram-reels`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    return (await res.json()).data || [];
+  } catch { return []; }
+}
+
 export default async function HomePage() {
-  const [homepageData, featured, newArrivals, trending, bestSellers, categories, stores] = await Promise.all([
+  const [homepageData, featured, newArrivals, trending, bestSellers, categories, stores, reels] = await Promise.all([
     getHomepageData(),
     getProducts('featured'),
     getProducts('new-arrivals'),
@@ -51,6 +59,7 @@ export default async function HomePage() {
     getProducts('best-sellers'),
     getCategories(),
     getStores(),
+    getReels(),
   ]);
 
   const sections: any[] = homepageData?.sections || [];
@@ -62,7 +71,7 @@ export default async function HomePage() {
     <>
       <GenderHomePage
         sections={sections}
-        initialData={{ heroBanners, promoBanners, featured, newArrivals, trending, bestSellers, categories, testimonials, stores }}
+        initialData={{ heroBanners, promoBanners, featured, newArrivals, trending, bestSellers, categories, testimonials, stores, reels }}
       />
       <Box sx={{ display: { md: 'none' }, height: 64 }} />
     </>

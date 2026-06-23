@@ -45,6 +45,7 @@ const SECTION_LABELS: Record<string, string> = {
   CUSTOM_BANNER: 'Custom Banner',
   STORE_LOCATOR: 'Store Locations',
   MARQUEE: 'Marquee / Ticker',
+  INSTAGRAM_REELS: 'Instagram Reels',
 };
 
 // Section types available when adding a new section
@@ -63,6 +64,7 @@ const ADDABLE_SECTIONS = [
   { type: 'STORE_LOCATOR',        label: 'Store Locations',       desc: '"Visit Our Stores" section with map links' },
   { type: 'NEWSLETTER',           label: 'Newsletter Signup',     desc: 'Email subscription form' },
   { type: 'MARQUEE',             label: 'Marquee / Ticker',      desc: 'Scrolling announcement strip with admin-controlled messages' },
+  { type: 'INSTAGRAM_REELS',    label: 'Instagram Reels',       desc: 'Auto-playing reels strip — manage reels in Content → Instagram Reels' },
 ];
 
 // ── Marquee config editor ──────────────────────────────────────

@@ -108,7 +108,7 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
         loop={banners.length > 1}
         style={{ width: '100%', height: '100%' }}
       >
-        {banners.map((banner) => (
+        {banners.map((banner, idx) => (
           <SwiperSlide key={banner.id}>
             <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
               <Image
@@ -116,7 +116,7 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
                 alt={banner.title}
                 fill
                 style={{ objectFit: 'cover', objectPosition: 'center center' }}
-                priority
+                priority={idx === 0}
                 sizes="100vw"
               />
               {/* Multi-stop gradient for better text legibility */}

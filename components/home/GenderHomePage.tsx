@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Box, Typography } from '@mui/material';
 import { useAppSelector } from '../../store';
 import HeroSlider from './HeroSlider';
@@ -11,6 +11,7 @@ import TestimonialsSection from './TestimonialsSection';
 import PromoBanners from './PromoBanners';
 import StoreLocations from './StoreLocations';
 import MarqueeStrip from './MarqueeStrip';
+import InstagramReels from './InstagramReels';
 import { productApi, bannerApi } from '../../services/api.service';
 
 // ── Promo strip ────────────────────────────────────────────────
@@ -66,6 +67,7 @@ interface Props {
     categories: any[];
     testimonials: any[];
     stores: any[];
+    reels: any[];
   };
 }
 
@@ -78,6 +80,16 @@ export default function GenderHomePage({ sections, initialData }: Props) {
   useEffect(() => { setHasMounted(true); }, []);
   const displayGender = hasMounted ? gender : 'WOMEN';
 
+  // Strict gender filter for homepage sections:
+  // UNISEX → always visible; null/Unset → never visible; WOMEN/MEN → only when that gender is active
+  const genderFilteredCategories = useMemo(() => {
+    return (initialData.categories as any[]).filter((cat) => {
+      if (cat.gender === 'UNISEX') return true;
+      if (!cat.gender) return false;
+      return cat.gender === displayGender;
+    });
+  }, [initialData.categories, displayGender]);
+
   const [products, setProducts] = useState<ProductData>({
     featured: initialData.featured,
     newArrivals: initialData.newArrivals,
@@ -86,11 +98,20 @@ export default function GenderHomePage({ sections, initialData }: Props) {
   });
   const [heroBanners, setHeroBanners] = useState<any[]>(initialData.heroBanners);
   const [promoBanners, setPromoBanners] = useState<any[]>(initialData.promoBanners);
-  // Dim sections while re-fetching for the new gender
-  const [fetching, setFetching] = useState(true);
+  const [fetching, setFetching] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  // Skip the first effect run after mount — SSR already provided that data
+  const skipNextFetch = useRef(true);
 
   useEffect(() => {
+    // hasMounted flips to true on mount, which triggers this effect.
+    // Skip that first run; only refetch when the user actually changes gender.
+    if (!hasMounted) return;
+    if (skipNextFetch.current) {
+      skipNextFetch.current = false;
+      return;
+    }
+
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -122,7 +143,7 @@ export default function GenderHomePage({ sections, initialData }: Props) {
     });
 
     return () => { controller.abort(); };
-  }, [gender]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gender, hasMounted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const genderLabel = displayGender === 'MEN' ? ' for Men' : ' for Women';
 
@@ -149,7 +170,7 @@ export default function GenderHomePage({ sections, initialData }: Props) {
         return (
           <CollectionBanners
             key={section.id}
-            categories={initialData.categories}
+            categories={genderFilteredCategories}
             gender={displayGender}
             title={title}
           />
@@ -201,7 +222,7 @@ export default function GenderHomePage({ sections, initialData }: Props) {
         );
       case 'FEATURED_CATEGORIES':
       case 'CATEGORY_SHOWCASE':
-        return <CategoryShowcase key={section.id} initialCategories={initialData.categories} />;
+        return <CategoryShowcase key={section.id} initialCategories={genderFilteredCategories} />;
       case 'PROMOTIONAL_BANNERS':
       case 'CUSTOM_BANNER':
         return <PromoBanners key={section.id} banners={promoBanners} title={title} />;
@@ -211,6 +232,8 @@ export default function GenderHomePage({ sections, initialData }: Props) {
         return <StoreLocations key={section.id} stores={initialData.stores} title={title} subtitle={section.subtitle} />;
       case 'MARQUEE':
         return <MarqueeStrip key={section.id} config={section.config || {}} />;
+      case 'INSTAGRAM_REELS':
+        return <InstagramReels key={section.id} reels={initialData.reels} sectionTitle={section.title} />;
       default:
         return null;
     }
@@ -239,7 +262,7 @@ export default function GenderHomePage({ sections, initialData }: Props) {
 
       {/* 4. Collection banners — horizontal scroll editorial cards */}
       <CollectionBanners
-        categories={initialData.categories}
+        categories={genderFilteredCategories}
         gender={displayGender}
       />
 
@@ -265,7 +288,7 @@ export default function GenderHomePage({ sections, initialData }: Props) {
       </Box>
 
       {/* 7. Category grid */}
-      <CategoryShowcase initialCategories={initialData.categories} />
+      <CategoryShowcase initialCategories={genderFilteredCategories} />
 
       {/* 8. Best Sellers carousel */}
       <Box sx={{ opacity: fetching ? 0.5 : 1, transition: 'opacity 0.25s' }}>
@@ -278,7 +301,12 @@ export default function GenderHomePage({ sections, initialData }: Props) {
         />
       </Box>
 
-      {/* 9. Social proof */}
+      {/* 9. Instagram Reels */}
+      {initialData.reels?.length > 0 && (
+        <InstagramReels reels={initialData.reels} />
+      )}
+
+      {/* 10. Social proof */}
       <TestimonialsSection testimonials={initialData.testimonials} />
     </>
   );

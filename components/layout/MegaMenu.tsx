@@ -13,6 +13,7 @@ export interface NavChild {
   id: string;
   name: string;
   slug: string;
+  gender?: string | null;
 }
 
 export interface NavCategory {
@@ -20,6 +21,7 @@ export interface NavCategory {
   name: string;
   slug: string;
   image?: string;
+  gender?: string | null;
   children: NavChild[];
 }
 

@@ -5,15 +5,23 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField,
   Avatar, Skeleton, Stack, TablePagination, InputAdornment,
   Select, MenuItem, FormControl, InputLabel, FormControlLabel,
-  Tooltip, Badge,
+  Tooltip, Badge, ToggleButtonGroup, ToggleButton,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, CloudUpload, Close, Visibility, VisibilityOff } from '@mui/icons-material';
+import { Add, Edit, Delete, Search, CloudUpload, Close, Man, Woman, AllInclusive, HelpOutline } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { categoryApi } from '../../../../services/api.service';
 import { toast } from 'react-hot-toast';
 
 const PAGE_SIZE = 20;
+
+// Gender colour palette
+const GENDER_META: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+  WOMEN:  { label: 'Women',   color: '#c2185b', bg: '#fce4ec', icon: <Woman sx={{ fontSize: 13 }} /> },
+  MEN:    { label: 'Men',     color: '#1565c0', bg: '#e3f2fd', icon: <Man  sx={{ fontSize: 13 }} /> },
+  UNISEX: { label: 'Unisex',  color: '#6a1b9a', bg: '#f3e5f5', icon: <AllInclusive sx={{ fontSize: 13 }} /> },
+  '':     { label: 'All',     color: '#555',    bg: '#f5f5f5', icon: <HelpOutline sx={{ fontSize: 13 }} /> },
+};
 
 const schema = Yup.object({
   name:            Yup.string().required('Name required'),
@@ -36,6 +44,7 @@ export default function CategoriesPage() {
   const [page, setPage]                 = useState(0);
   const [total, setTotal]               = useState(0);
   const [search, setSearch]             = useState('');
+  const [genderFilter, setGenderFilter] = useState<string>('ALL');
   const [dialogOpen, setDialogOpen]     = useState(false);
   const [editCat, setEditCat]           = useState<any>(null);
   const [imageFile, setImageFile]       = useState<File | null>(null);
@@ -50,6 +59,21 @@ export default function CategoriesPage() {
         setTotal((data as any).meta?.total || 0);
       }).finally(() => setLoading(false));
   }, [page, search]);
+
+  // Quick-toggle gender on a category row
+  const handleGenderToggle = async (cat: any, newGender: string) => {
+    const val = newGender || null;
+    setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, gender: val } : c));
+    const fd = new FormData();
+    fd.append('gender', newGender);
+    try {
+      await categoryApi.update(cat.id, fd);
+      toast.success(`Gender set to ${newGender || 'Unspecified'}`);
+    } catch {
+      setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, gender: cat.gender } : c));
+      toast.error('Update failed');
+    }
+  };
 
   const fetchParents = useCallback(() => {
     categoryApi.getParents().then(({ data }) => setParents((data as any).data || []));
@@ -199,10 +223,43 @@ export default function CategoriesPage() {
         </Button>
       </Box>
 
-      <Box sx={{ mb: 2.5 }}>
-        <TextField size="small" placeholder="Search categories…" sx={{ width: 280 }}
+      <Box sx={{ mb: 2.5, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+        <TextField size="small" placeholder="Search categories…" sx={{ width: 260 }}
           value={search} onChange={e => { setSearch(e.target.value); setPage(0); }}
           InputProps={{ startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> }} />
+
+        {/* Gender filter tabs */}
+        <ToggleButtonGroup
+          size="small"
+          exclusive
+          value={genderFilter}
+          onChange={(_, v) => { if (v !== null) { setGenderFilter(v); setPage(0); } }}
+          sx={{ '& .MuiToggleButton-root': { px: 1.5, py: 0.6, fontSize: '0.72rem', fontWeight: 700, textTransform: 'none' } }}
+        >
+          <ToggleButton value="ALL">All</ToggleButton>
+          <ToggleButton value="WOMEN" sx={{ color: '#c2185b', '&.Mui-selected': { bgcolor: '#fce4ec', color: '#c2185b' } }}>
+            <Woman sx={{ fontSize: 15, mr: 0.5 }} /> Women
+          </ToggleButton>
+          <ToggleButton value="MEN" sx={{ color: '#1565c0', '&.Mui-selected': { bgcolor: '#e3f2fd', color: '#1565c0' } }}>
+            <Man sx={{ fontSize: 15, mr: 0.5 }} /> Men
+          </ToggleButton>
+          <ToggleButton value="UNISEX" sx={{ color: '#6a1b9a', '&.Mui-selected': { bgcolor: '#f3e5f5', color: '#6a1b9a' } }}>
+            <AllInclusive sx={{ fontSize: 15, mr: 0.5 }} /> Unisex
+          </ToggleButton>
+          <ToggleButton value="UNSET" sx={{ color: '#888', '&.Mui-selected': { bgcolor: '#f5f5f5', color: '#555' } }}>
+            Unset
+          </ToggleButton>
+        </ToggleButtonGroup>
+
+        {/* Count summary */}
+        <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+          {(() => {
+            const filtered = genderFilter === 'ALL' ? categories
+              : genderFilter === 'UNSET' ? categories.filter(c => !c.gender)
+              : categories.filter(c => c.gender === genderFilter);
+            return `${filtered.length} of ${categories.length} categories`;
+          })()}
+        </Typography>
       </Box>
 
       {loading ? (
@@ -212,10 +269,16 @@ export default function CategoriesPage() {
       ) : (
         <>
           <Stack spacing={1.5}>
-            {categories.map((cat) => (
+            {categories
+              .filter(cat => {
+                if (genderFilter === 'ALL') return true;
+                if (genderFilter === 'UNSET') return !cat.gender;
+                return cat.gender === genderFilter;
+              })
+              .map((cat) => (
               <Card key={cat.id} elevation={0} sx={{
                 border: '1px solid', borderRadius: 2,
-                borderColor: cat.isActive ? 'divider' : '#f5f5f5',
+                borderColor: cat.isActive ? (GENDER_META[cat.gender || '']?.color + '44' || 'divider') : '#f5f5f5',
                 opacity: cat.isActive ? 1 : 0.65,
               }}>
                 <CardContent sx={{ p: 2, '&:last-child': { pb: 2 }, display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -237,6 +300,23 @@ export default function CategoriesPage() {
                       {cat.isFeatured && (
                         <Chip label="Featured" size="small" color="warning" sx={{ fontSize: '0.62rem', height: 18 }} />
                       )}
+                      {/* Gender chip */}
+                      {cat.gender ? (
+                        <Chip
+                          icon={GENDER_META[cat.gender]?.icon as any}
+                          label={GENDER_META[cat.gender]?.label || cat.gender}
+                          size="small"
+                          sx={{
+                            fontSize: '0.62rem', height: 20,
+                            bgcolor: GENDER_META[cat.gender]?.bg,
+                            color: GENDER_META[cat.gender]?.color,
+                            fontWeight: 700,
+                            '& .MuiChip-icon': { color: 'inherit', ml: 0.5 },
+                          }}
+                        />
+                      ) : (
+                        <Chip label="Unset" size="small" sx={{ fontSize: '0.62rem', height: 20, bgcolor: '#f5f5f5', color: '#999' }} />
+                      )}
                     </Box>
                     <Typography variant="caption" color="text.secondary">
                       /{cat.slug} · {cat._count?.products ?? 0} products
@@ -245,7 +325,31 @@ export default function CategoriesPage() {
                     </Typography>
                   </Box>
 
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+
+                    {/* Quick gender select */}
+                    <Tooltip title="Set gender for this category" arrow>
+                      <Select
+                        size="small"
+                        value={cat.gender || ''}
+                        onChange={(e) => handleGenderToggle(cat, e.target.value as string)}
+                        displayEmpty
+                        sx={{
+                          fontSize: '0.7rem', height: 28, minWidth: 88,
+                          bgcolor: GENDER_META[cat.gender || '']?.bg || '#f5f5f5',
+                          color: GENDER_META[cat.gender || '']?.color || '#888',
+                          fontWeight: 700,
+                          '& .MuiOutlinedInput-notchedOutline': { borderColor: GENDER_META[cat.gender || '']?.color + '55' || '#e0e0e0' },
+                          '& .MuiSelect-icon': { color: GENDER_META[cat.gender || '']?.color || '#aaa', fontSize: 16 },
+                        }}
+                      >
+                        <MenuItem value=""><em style={{ color: '#aaa', fontStyle: 'italic', fontSize: '0.7rem' }}>Unset</em></MenuItem>
+                        <MenuItem value="WOMEN" sx={{ fontSize: '0.78rem', color: '#c2185b', fontWeight: 700 }}>♀ Women</MenuItem>
+                        <MenuItem value="MEN"   sx={{ fontSize: '0.78rem', color: '#1565c0', fontWeight: 700 }}>♂ Men</MenuItem>
+                        <MenuItem value="UNISEX" sx={{ fontSize: '0.78rem', color: '#6a1b9a', fontWeight: 700 }}>⚥ Unisex</MenuItem>
+                      </Select>
+                    </Tooltip>
+
                     <Tooltip title={cat.showInNav ? 'Shown in nav mega menu' : 'Hidden from nav'} arrow>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <Switch
@@ -282,8 +386,14 @@ export default function CategoriesPage() {
                 </CardContent>
               </Card>
             ))}
-            {categories.length === 0 && (
-              <Typography color="text.secondary" sx={{ p: 4, textAlign: 'center' }}>No categories found</Typography>
+            {categories.filter(cat => {
+              if (genderFilter === 'ALL') return true;
+              if (genderFilter === 'UNSET') return !cat.gender;
+              return cat.gender === genderFilter;
+            }).length === 0 && (
+              <Typography color="text.secondary" sx={{ p: 4, textAlign: 'center' }}>
+                No {genderFilter !== 'ALL' ? genderFilter.toLowerCase() : ''} categories found
+              </Typography>
             )}
           </Stack>
 
@@ -380,19 +490,44 @@ export default function CategoriesPage() {
                 {...formik.getFieldProps('sortOrder')}
                 helperText="Lower = shown first"
               />
-              <FormControl size="small" fullWidth>
-                <InputLabel>Gender</InputLabel>
-                <Select
-                  label="Gender"
-                  value={formik.values.gender}
-                  onChange={e => formik.setFieldValue('gender', e.target.value)}
-                >
-                  <MenuItem value=""><em>— Unspecified —</em></MenuItem>
-                  <MenuItem value="WOMEN">Women</MenuItem>
-                  <MenuItem value="MEN">Men</MenuItem>
-                  <MenuItem value="UNISEX">Unisex</MenuItem>
-                </Select>
-              </FormControl>
+              <Box>
+                <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+                  Gender Audience
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 0.75 }}>
+                  {[
+                    { value: '', label: 'Unset', color: '#777', bg: '#f5f5f5' },
+                    { value: 'WOMEN', label: '♀ Women', color: '#c2185b', bg: '#fce4ec' },
+                    { value: 'MEN',   label: '♂ Men',   color: '#1565c0', bg: '#e3f2fd' },
+                    { value: 'UNISEX',label: '⚥ Unisex',color: '#6a1b9a', bg: '#f3e5f5' },
+                  ].map(opt => (
+                    <Box
+                      key={opt.value}
+                      onClick={() => formik.setFieldValue('gender', opt.value)}
+                      sx={{
+                        flex: 1, textAlign: 'center',
+                        py: 0.75, px: 0.5,
+                        borderRadius: 1.5,
+                        border: '2px solid',
+                        borderColor: formik.values.gender === opt.value ? opt.color : 'transparent',
+                        bgcolor: formik.values.gender === opt.value ? opt.bg : '#f9f9f9',
+                        color: formik.values.gender === opt.value ? opt.color : '#888',
+                        fontWeight: formik.values.gender === opt.value ? 800 : 500,
+                        fontSize: '0.72rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                        '&:hover': { bgcolor: opt.bg, borderColor: opt.color + '88', color: opt.color },
+                        userSelect: 'none',
+                      }}
+                    >
+                      {opt.label}
+                    </Box>
+                  ))}
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  Controls which gender's homepage/nav this category appears in
+                </Typography>
+              </Box>
             </Box>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
