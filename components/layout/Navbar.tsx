@@ -203,13 +203,15 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
                   <Image
                     src={settings.logo_url}
                     alt={settings.site_name || 'Unique Dressup'}
-                    width={320}
-                    height={100}
+                    width={520}
+                    height={160}
+                    unoptimized
                     style={{
                       objectFit: 'contain',
+                      objectPosition: 'left center',
                       height: isMobile ? 48 : 72,
                       width: 'auto',
-                      maxWidth: isMobile ? 160 : 260,
+                      maxWidth: isMobile ? 160 : 280,
                     }}
                     priority
                   />

@@ -1,10 +1,15 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Box, Typography, Card, CardContent, TextField, Button, Divider,
-  Grid, CircularProgress, Tabs, Tab,
+  Grid, CircularProgress, Tabs, Tab, Paper, Chip, LinearProgress,
 } from '@mui/material';
+import {
+  CloudUpload, CheckCircle, Image as ImageIcon, Delete,
+} from '@mui/icons-material';
+import Image from 'next/image';
 import { settingsApi } from '../../../../services/api.service';
+import api from '../../../../lib/axios';
 import { toast } from 'react-hot-toast';
 
 interface TabPanelProps { children?: React.ReactNode; index: number; value: number; }
@@ -12,6 +17,203 @@ const TabPanel = ({ children, value, index }: TabPanelProps) => (
   <Box hidden={value !== index} sx={{ pt: 3 }}>{value === index && children}</Box>
 );
 
+// ── Logo Uploader ──────────────────────────────────────────────────
+interface LogoUploaderProps {
+  value: string;
+  onChange: (url: string) => void;
+}
+
+function LogoUploader({ value, onChange }: LogoUploaderProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  const upload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file (PNG, JPG, SVG, WebP)');
+      return;
+    }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('files', file);
+      fd.append('folder', 'GENERAL');
+      const { data } = await api.post('/media/upload', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const url = data.data?.[0]?.url || '';
+      if (url) {
+        onChange(url);
+        toast.success('Logo uploaded');
+      }
+    } catch {
+      toast.error('Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) upload(file);
+    e.target.value = '';
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) upload(file);
+  };
+
+  return (
+    <Box>
+      <Typography variant="caption" fontWeight={700} sx={{ color: 'text.secondary', display: 'block', mb: 1.5, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        Store Logo
+      </Typography>
+
+      {/* Current logo preview */}
+      {value ? (
+        <Paper
+          elevation={0}
+          sx={{
+            border: '2px solid #e8e8e8',
+            borderRadius: 2,
+            p: 2.5,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2,
+            mb: 2,
+            bgcolor: '#f8f8f8',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
+            {/* Checkered background to show transparency */}
+            <Box sx={{
+              width: 180, height: 72, flexShrink: 0,
+              backgroundImage: 'linear-gradient(45deg, #d8d8d8 25%, transparent 25%), linear-gradient(-45deg, #d8d8d8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #d8d8d8 75%), linear-gradient(-45deg, transparent 75%, #d8d8d8 75%)',
+              backgroundSize: '12px 12px',
+              backgroundPosition: '0 0, 0 6px, 6px -6px, -6px 0px',
+              bgcolor: 'white',
+              borderRadius: 1,
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid #e0e0e0',
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={value}
+                alt="logo preview"
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }}
+              />
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
+                <CheckCircle sx={{ fontSize: 16, color: '#2e7d32' }} />
+                <Typography variant="body2" fontWeight={700} color="#2e7d32">Logo active</Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-all', display: 'block' }} noWrap>
+                {value.length > 60 ? `…${value.slice(-55)}` : value}
+              </Typography>
+            </Box>
+          </Box>
+          <Button
+            size="small"
+            startIcon={<Delete sx={{ fontSize: 16 }} />}
+            onClick={() => onChange('')}
+            sx={{ color: '#d32f2f', fontWeight: 700, flexShrink: 0, '&:hover': { bgcolor: '#fff0f0' } }}
+          >
+            Remove
+          </Button>
+        </Paper>
+      ) : (
+        <Paper
+          elevation={0}
+          sx={{
+            border: `2px dashed ${dragOver ? '#1a1a1a' : '#d0d0d0'}`,
+            borderRadius: 2,
+            p: { xs: 3, md: 4 },
+            textAlign: 'center',
+            bgcolor: dragOver ? '#f5f5f5' : '#fafafa',
+            transition: 'all 0.15s',
+            mb: 2,
+            cursor: 'pointer',
+          }}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => !uploading && inputRef.current?.click()}
+        >
+          {uploading ? (
+            <Box>
+              <CircularProgress size={32} sx={{ color: '#1a1a1a', mb: 1 }} />
+              <Typography variant="body2" color="text.secondary">Uploading logo…</Typography>
+              <LinearProgress sx={{ mt: 2, borderRadius: 1, bgcolor: '#e0e0e0', '& .MuiLinearProgress-bar': { bgcolor: '#1a1a1a' } }} />
+            </Box>
+          ) : (
+            <Box>
+              <CloudUpload sx={{ fontSize: 40, color: '#bbb', mb: 1 }} />
+              <Typography variant="body1" fontWeight={700} sx={{ mb: 0.5 }}>
+                Drop your logo here or click to upload
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                PNG, SVG, WebP — transparent background recommended
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap', mt: 1.5 }}>
+                {['PNG with transparency', 'Min 400px wide', 'SVG preferred'].map(t => (
+                  <Chip key={t} label={t} size="small" sx={{ fontSize: '0.65rem', height: 20 }} />
+                ))}
+              </Box>
+            </Box>
+          )}
+        </Paper>
+      )}
+
+      {/* Upload button */}
+      <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleFile}
+        />
+        <Button
+          variant="outlined"
+          startIcon={uploading ? <CircularProgress size={14} /> : <CloudUpload sx={{ fontSize: 16 }} />}
+          onClick={() => !uploading && inputRef.current?.click()}
+          disabled={uploading}
+          sx={{ fontWeight: 700, borderColor: '#1a1a1a', color: '#1a1a1a', '&:hover': { bgcolor: '#1a1a1a', color: 'white' }, borderRadius: 1.5 }}
+        >
+          {value ? 'Replace Logo' : 'Upload Logo'}
+        </Button>
+        {value && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <ImageIcon sx={{ fontSize: 14 }} />
+            Showing checkered bg = transparent area
+          </Typography>
+        )}
+      </Box>
+
+      {/* URL fallback */}
+      <TextField
+        label="Or paste a logo URL directly"
+        size="small"
+        fullWidth
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="https://... or /logo.png"
+        sx={{ mt: 2 }}
+        InputProps={{ sx: { fontSize: '0.82rem' } }}
+      />
+    </Box>
+  );
+}
+
+// ── Main page ──────────────────────────────────────────────────────
 export default function SettingsPage() {
   const [tab, setTab] = useState(0);
   const [settings, setSettings] = useState<Record<string, string>>({});
@@ -74,16 +276,29 @@ export default function SettingsPage() {
           <Box sx={{ p: 3 }}>
             {/* Store */}
             <TabPanel value={tab} index={0}>
-              <Grid container spacing={2}>
+              <Grid container spacing={3}>
+
+                {/* Logo uploader — full width at top */}
+                <Grid item xs={12}>
+                  <Paper elevation={0} sx={{ border: '1px solid #e8e8e8', borderRadius: 2, p: 3 }}>
+                    <LogoUploader
+                      value={settings['logo_url'] ?? ''}
+                      onChange={url => set('logo_url', url)}
+                    />
+                  </Paper>
+                </Grid>
+
+                <Grid item xs={12}><Divider /></Grid>
+
+                {/* Store details */}
                 {[
-                  { key: 'site_name', label: 'Store Name' },
+                  { key: 'site_name',    label: 'Store Name' },
                   { key: 'site_tagline', label: 'Tagline' },
-                  { key: 'site_email', label: 'Contact Email' },
-                  { key: 'site_phone', label: 'Phone Number' },
-                  { key: 'currency', label: 'Currency Code (e.g. INR)' },
+                  { key: 'site_email',   label: 'Contact Email' },
+                  { key: 'site_phone',   label: 'Phone Number' },
+                  { key: 'currency',        label: 'Currency Code (e.g. INR)' },
                   { key: 'currency_symbol', label: 'Currency Symbol (e.g. ₹)' },
-                  { key: 'contact_hours', label: 'Business Hours (e.g. Mon–Sat: 10am–7pm)' },
-                  { key: 'logo_url', label: 'Logo URL (e.g. /logo.jpg or https://...)' },
+                  { key: 'contact_hours',   label: 'Business Hours (e.g. Mon–Sat: 10am–7pm)' },
                 ].map(({ key, label }) => (
                   <Grid item xs={12} sm={6} key={key}>
                     <TextField label={label} size="small" fullWidth
@@ -108,8 +323,8 @@ export default function SettingsPage() {
               <Grid container spacing={2}>
                 {[
                   { key: 'free_shipping_threshold', label: 'Free Shipping Threshold (₹)' },
-                  { key: 'standard_shipping_rate', label: 'Standard Shipping Rate (₹)' },
-                  { key: 'express_shipping_rate', label: 'Express Shipping Rate (₹)' },
+                  { key: 'standard_shipping_rate',  label: 'Standard Shipping Rate (₹)' },
+                  { key: 'express_shipping_rate',   label: 'Express Shipping Rate (₹)' },
                 ].map(({ key, label }) => (
                   <Grid item xs={12} sm={6} key={key}>
                     <TextField label={label} type="number" size="small" fullWidth
@@ -126,9 +341,9 @@ export default function SettingsPage() {
               <Grid container spacing={2}>
                 {[
                   { key: 'instagram_url', label: 'Instagram URL' },
-                  { key: 'facebook_url', label: 'Facebook URL' },
-                  { key: 'twitter_url', label: 'Twitter / X URL' },
-                  { key: 'youtube_url', label: 'YouTube URL' },
+                  { key: 'facebook_url',  label: 'Facebook URL' },
+                  { key: 'twitter_url',   label: 'Twitter / X URL' },
+                  { key: 'youtube_url',   label: 'YouTube URL' },
                   { key: 'pinterest_url', label: 'Pinterest URL' },
                 ].map(({ key, label }) => (
                   <Grid item xs={12} key={key}>
