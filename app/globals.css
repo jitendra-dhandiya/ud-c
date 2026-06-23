@@ -51,6 +51,25 @@ a, button, [role="button"], input, select, textarea, label {
   overscroll-behavior: contain;
 }
 
+/* Skip rendering off-screen sections — reduces layout work during fast scroll */
+@media (max-width: 899px) {
+  section,
+  [data-section] {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 400px;
+  }
+}
+
+/* GPU layer hint for elements that animate */
+@media (max-width: 899px) {
+  .swiper,
+  .swiper-slide,
+  [class*="MuiCard-root"] {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #f1f1f1; }

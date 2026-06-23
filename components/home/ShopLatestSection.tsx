@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Box, Typography, Container, Grid } from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import ProductCard, { ProductCardSkeleton } from '../product/ProductCard';
 import { categoryApi, productApi } from '../../services/api.service';
 import { useAppDispatch } from '../../store';
@@ -195,35 +195,21 @@ export default function ShopLatestSection({
         </Box>
 
         {/* ── Product grid ───────────────────────────────────────── */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`${activeChip}-${gender}`}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: isLoading ? 0.45 : 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Grid container spacing={{ xs: 1.5, sm: 2, md: 2.5 }}>
-              {isLoading || displayProducts.length === 0
-                ? Array.from({ length: 8 }).map((_, i) => (
-                    <Grid key={i} item xs={6} sm={4} md={3}>
-                      <ProductCardSkeleton />
-                    </Grid>
-                  ))
-                : displayProducts.map((product, i) => (
-                    <Grid key={product.id} item xs={6} sm={4} md={3}>
-                      <motion.div
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.04, duration: 0.38 }}
-                      >
-                        <ProductCard product={product} />
-                      </motion.div>
-                    </Grid>
-                  ))}
-            </Grid>
-          </motion.div>
-        </AnimatePresence>
+        <Box sx={{ opacity: isLoading ? 0.45 : 1, transition: 'opacity 0.25s' }}>
+          <Grid container spacing={{ xs: 1.5, sm: 2, md: 2.5 }}>
+            {isLoading || displayProducts.length === 0
+              ? Array.from({ length: 8 }).map((_, i) => (
+                  <Grid key={i} item xs={6} sm={4} md={3}>
+                    <ProductCardSkeleton />
+                  </Grid>
+                ))
+              : displayProducts.map((product) => (
+                  <Grid key={product.id} item xs={6} sm={4} md={3}>
+                    <ProductCard product={product} />
+                  </Grid>
+                ))}
+          </Grid>
+        </Box>
 
         {/* ── View All pill button ───────────────────────────────── */}
         {!isLoading && displayProducts.length > 0 && (

@@ -5,6 +5,7 @@ import MobileBottomNav from '../../components/layout/MobileBottomNav';
 import AuthInitializer from '../../components/common/AuthInitializer';
 import GenderInitializer from '../../components/common/GenderInitializer';
 import LoginModal from '../../components/auth/LoginModal';
+import MobileMotionConfig from '../../components/common/MobileMotionConfig';
 import { API_URL } from '../../constants';
 
 // Strip /api/v1 to get the base server URL — works for both localhost and production
@@ -41,7 +42,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   ]);
 
   return (
-    <>
+    <MobileMotionConfig>
       <AuthInitializer />
       <GenderInitializer />
       <Navbar settings={settings} navCategories={navCategories} />
@@ -50,6 +51,6 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <CartDrawer />
       <MobileBottomNav />
       <LoginModal />
-    </>
+    </MobileMotionConfig>
   );
 }
