@@ -12,13 +12,43 @@
   --midnight: #0d0d0d;
 }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* Prevent font scaling when device rotates */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 
 body {
   font-family: var(--font-inter);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #fafafa;
+  /* Prevent rubber-band scroll from locking the page on iOS/Android */
+  overscroll-behavior-y: none;
+  /* Enable GPU-composited momentum scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Eliminate 300ms tap delay on all interactive elements */
+a, button, [role="button"], input, select, textarea, label {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure page content is never hidden behind the fixed mobile bottom nav */
+@media (max-width: 899px) {
+  main {
+    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* Smooth scrolling containers — prevent choppiness on iOS */
+.swiper-wrapper,
+[class*="MuiDrawer"],
+[class*="MuiDialog"] {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 /* Scrollbar */

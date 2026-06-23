@@ -206,7 +206,7 @@ export default function AdminLayoutClient({ children }: Props) {
       )}
 
       {/* Main */}
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Top bar */}
         <AppBar elevation={0} position="sticky" sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider', color: 'text.primary' }}>
           <Toolbar sx={{ gap: 2 }}>

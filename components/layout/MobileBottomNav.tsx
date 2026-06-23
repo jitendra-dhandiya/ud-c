@@ -31,9 +31,12 @@ export default function MobileBottomNav() {
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200,
         borderTop: '1px solid', borderColor: 'divider',
         display: { md: 'none' },
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        touchAction: 'manipulation',
+        WebkitTapHighlightColor: 'transparent',
       }}
     >
-      <BottomNavigation value={getActive()} showLabels={false} sx={{ height: 58 }}>
+      <BottomNavigation value={getActive()} showLabels={false} sx={{ height: 58, touchAction: 'manipulation' }}>
         <BottomNavigationAction icon={<Home />} component={Link} href="/" />
         <BottomNavigationAction icon={<Search />} component={Link} href="/search" />
         <BottomNavigationAction

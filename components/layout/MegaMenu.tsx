@@ -61,13 +61,11 @@ export function MegaMenuDesktop({ categories, onLinkClick }: MegaMenuProps) {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Lock body scroll while the panel is open
+  // Lock body scroll while the panel is open — desktop only, never on mobile
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
+    if (!isDesktop) return;
+    document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
