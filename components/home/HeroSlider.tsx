@@ -106,6 +106,7 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
         navigation
         pagination={{ clickable: true }}
         loop={banners.length > 1}
+        touchStartPreventDefault={false}
         style={{ width: '100%', height: '100%' }}
       >
         {banners.map((banner, idx) => (

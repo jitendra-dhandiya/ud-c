@@ -79,13 +79,7 @@ export default function CategoryShowcase({ initialCategories = [] }: Props) {
           }}
         >
           {categories.map((cat, i) => (
-            <motion.div
-              key={cat.id}
-              initial={{ opacity: 0, y: 22 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: Math.min(i, 3) * 0.07, duration: 0.48 }}
-            >
+            <Box key={cat.id}>
               <Link href={`/category/${cat.slug}`} style={{ textDecoration: 'none', display: 'block' }}>
                 <Box
                   sx={{
@@ -178,7 +172,7 @@ export default function CategoryShowcase({ initialCategories = [] }: Props) {
                   </Box>
                 </Box>
               </Link>
-            </motion.div>
+            </Box>
           ))}
 
         </Box>

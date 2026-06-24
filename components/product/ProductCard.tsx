@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -24,6 +24,11 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
   const [inWishlist, setInWishlist] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
+  // On touch devices mouseenter fires during scroll — guard against it.
+  // useRef so this never causes a re-render.
+  const isTouch = useRef(
+    typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches
+  );
 
   const displayPrice = product.salePrice || product.basePrice;
   const discount = product.salePrice ? getDiscountPercent(product.basePrice, product.salePrice) : 0;
@@ -58,8 +63,8 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
       {/* ── Image block ── */}
       <Box
         sx={{ position: 'relative', paddingTop: '133%', bgcolor: '#f4f4f4', overflow: 'hidden', mb: 1.5 }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseEnter={() => { if (!isTouch.current) setHovered(true); }}
+        onMouseLeave={() => { if (!isTouch.current) setHovered(false); }}
       >
         {/* Primary image */}
         {primaryImage ? (
@@ -150,11 +155,12 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
           )}
         </IconButton>
 
-        {/* Quick Add — slides up from bottom on hover */}
+        {/* Quick Add — slides up from bottom on hover (desktop only) */}
         <Box sx={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
           transform: hovered ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94)',
+          '@media (hover: none)': { display: 'none' },
         }}>
           <Button
             fullWidth

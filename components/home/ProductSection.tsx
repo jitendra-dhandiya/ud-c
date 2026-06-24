@@ -167,7 +167,7 @@ export default function ProductSection({
             scrollSnapType: 'x proximity',
             scrollbarWidth: 'none',
             '&::-webkit-scrollbar': { display: 'none' },
-            touchAction: 'pan-x',
+            touchAction: 'pan-x pan-y', /* pan-x alone blocks vertical scroll starting on cards */
             overscrollBehaviorX: 'contain',
             // Bleed to the right viewport edge
             mr: { xs: -2, sm: -3 },

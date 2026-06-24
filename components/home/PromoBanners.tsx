@@ -88,12 +88,13 @@ export default function PromoBanners({ banners, title }: Props) {
           </motion.div>
         ) : (
           <Box
+            className="h-scroll"
             sx={{
               display: 'flex',
               gap: { xs: 1.5, md: 2 },
               overflowX: { xs: 'auto', md: 'visible' },
               flexWrap: { xs: 'nowrap', md: 'wrap' },
-              scrollSnapType: 'x mandatory',
+              scrollSnapType: 'x proximity',
               scrollbarWidth: 'none',
               '&::-webkit-scrollbar': { display: 'none' },
               mx: { xs: -2, sm: -3, md: 0 },

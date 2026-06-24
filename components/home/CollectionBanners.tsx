@@ -48,13 +48,9 @@ export default function CollectionBanners({ categories, gender, title = 'Shop by
         }}
       >
         {categories.slice(0, 8).map((cat, i) => (
-          <motion.div
+          <Box
             key={cat.id}
-            initial={{ opacity: 0, x: 24 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.07, duration: 0.45 }}
-            style={{ flexShrink: 0, scrollSnapAlign: 'start' }}
+            sx={{ flexShrink: 0, scrollSnapAlign: 'start' }}
           >
             <Link href={`/category/${cat.slug}`} style={{ textDecoration: 'none' }}>
               <Box
@@ -62,6 +58,7 @@ export default function CollectionBanners({ categories, gender, title = 'Shop by
                   position: 'relative',
                   width: { xs: 210, sm: 250, md: 290 },
                   height: { xs: 280, sm: 333, md: 387 },
+
                   overflow: 'hidden',
                   cursor: 'pointer',
                   '&:hover .coll-img': { transform: 'scale(1.06)' },
@@ -139,7 +136,7 @@ export default function CollectionBanners({ categories, gender, title = 'Shop by
                 </Box>
               </Box>
             </Link>
-          </motion.div>
+          </Box>
         ))}
       </Box>
     </Box>

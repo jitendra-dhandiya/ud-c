@@ -47,7 +47,13 @@ a, button, [role="button"] {
  * Inherit pan-y from body would break left/right swiping.
  */
 .h-scroll {
-  touch-action: pan-x;
+  /*
+   * pan-x pan-y: allows BOTH axes.
+   * pan-x alone blocks vertical scroll when finger starts ON a carousel card —
+   * the exact reason "Best Sellers / Fan Favourites" sections felt stuck.
+   * The browser uses the initial gesture direction to pick which axis to scroll.
+   */
+  touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
 }

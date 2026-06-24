@@ -48,6 +48,7 @@ export default function TestimonialsSection({ testimonials }: TestimonialsSectio
             640: { slidesPerView: 2 },
             1024: { slidesPerView: 3 },
           }}
+          touchStartPreventDefault={false}
           style={{ paddingBottom: 48 }}
         >
           {testimonials.map((t) => (
