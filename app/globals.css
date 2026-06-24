@@ -14,9 +14,15 @@
 
 html {
   scroll-behavior: smooth;
-  /* Prevent font scaling when device rotates */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /*
+   * CRITICAL: Tell the browser compositor this page scrolls ONLY vertically.
+   * Without this the browser must ask JavaScript for scroll direction on every
+   * touch → main thread consulted → 100-300 ms freeze before scroll starts.
+   * With this the compositor thread handles scroll instantly, zero JS involved.
+   */
+  touch-action: pan-y;
 }
 
 body {
@@ -24,49 +30,53 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #fafafa;
-  /* Prevent rubber-band scroll from locking the page on iOS/Android */
+  touch-action: pan-y;
+  /* Prevent rubber-band bounce from locking the page on iOS/Android */
   overscroll-behavior-y: none;
-  /* Enable GPU-composited momentum scrolling on iOS */
-  -webkit-overflow-scrolling: touch;
 }
 
-/* Eliminate 300ms tap delay on all interactive elements */
-a, button, [role="button"], input, select, textarea, label {
-  touch-action: manipulation;
+/* Eliminate 300ms tap delay on interactive elements (does NOT override pan-y) */
+a, button, [role="button"] {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Ensure page content is never hidden behind the fixed mobile bottom nav */
+/*
+ * Horizontal scroll containers MUST override to pan-x so the compositor
+ * knows these scroll sideways. Without this override they inherit pan-y
+ * from body and cannot be swiped left/right.
+ */
+.h-scroll {
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* Swiper containers: pan-y lets vertical page-scroll pass through while
+   Swiper captures horizontal swipes internally */
+.swiper {
+  touch-action: pan-y;
+}
+
+/* Ensure page content never hides behind the fixed mobile bottom nav */
 @media (max-width: 899px) {
   main {
     padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
-/* Smooth scrolling containers — prevent choppiness on iOS */
-.swiper-wrapper,
+/* MUI Drawers and Dialogs: contain their own scroll context */
 [class*="MuiDrawer"],
 [class*="MuiDialog"] {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
 
-/* Skip rendering off-screen sections — reduces layout work during fast scroll */
+/* Skip rendering off-screen sections on mobile */
 @media (max-width: 899px) {
   section,
   [data-section] {
     content-visibility: auto;
     contain-intrinsic-size: 0 400px;
-  }
-}
-
-/* GPU layer hint for elements that animate */
-@media (max-width: 899px) {
-  .swiper,
-  .swiper-slide,
-  [class*="MuiCard-root"] {
-    transform: translateZ(0);
-    backface-visibility: hidden;
   }
 }
 

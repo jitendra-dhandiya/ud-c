@@ -313,6 +313,7 @@ export default function InstagramReels({ reels, sectionTitle }: Props) {
 
         {/* Horizontal scroll strip */}
         <Box
+          className="h-scroll"
           sx={{
             display: 'flex',
             gap: { xs: 1.5, md: 2 },
@@ -322,9 +323,8 @@ export default function InstagramReels({ reels, sectionTitle }: Props) {
             px: { xs: 2, md: 0 },
             scrollbarWidth: 'none',
             '&::-webkit-scrollbar': { display: 'none' },
-            scrollSnapType: 'x mandatory',
+            scrollSnapType: 'x proximity',
             '& > *': { scrollSnapAlign: 'start' },
-            WebkitOverflowScrolling: 'touch',
           }}
         >
           {reels.map((reel, i) => (

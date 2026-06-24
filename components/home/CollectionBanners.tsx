@@ -35,11 +35,12 @@ export default function CollectionBanners({ categories, gender, title = 'Shop by
 
       {/* Horizontal scroll strip — intentionally full-bleed */}
       <Box
+        className="h-scroll"
         sx={{
           display: 'flex',
           gap: { xs: 1.5, md: 2 },
           overflowX: 'auto',
-          scrollSnapType: 'x mandatory',
+          scrollSnapType: 'x proximity',
           px: { xs: 2, sm: 4, md: 6 },
           pb: 1,
           scrollbarWidth: 'none',

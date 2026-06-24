@@ -164,10 +164,11 @@ export default function ProductSection({
             gap: { xs: '12px', md: '16px' },
             overflowX: 'auto',
             WebkitOverflowScrolling: 'touch',
-            scrollSnapType: 'x mandatory',
+            scrollSnapType: 'x proximity',
             scrollbarWidth: 'none',
             '&::-webkit-scrollbar': { display: 'none' },
             touchAction: 'pan-x',
+            overscrollBehaviorX: 'contain',
             // Bleed to the right viewport edge
             mr: { xs: -2, sm: -3 },
             // Right gap so the next card peeks in
