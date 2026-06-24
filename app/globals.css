@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800&display=swap');
+/* ─── Fonts are loaded via <link> in layout.tsx — NOT @import ────────────────
+   @import is render-blocking: browser stops painting to fetch the font CSS.
+   <link rel="preconnect"> + <link rel="stylesheet"> runs in parallel with HTML. */
 
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -13,14 +15,15 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  /* NO scroll-behavior: smooth here.
+     CSS smooth-scroll fights native momentum fling on iOS/Android — the two
+     interpolation algorithms conflict and freeze the page mid-scroll. */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   /*
-   * CRITICAL: Tell the browser compositor this page scrolls ONLY vertically.
-   * Without this the browser must ask JavaScript for scroll direction on every
-   * touch → main thread consulted → 100-300 ms freeze before scroll starts.
-   * With this the compositor thread handles scroll instantly, zero JS involved.
+   * CRITICAL: Tells the compositor this page scrolls ONLY vertically.
+   * Without this the browser consults JS on every touch before committing
+   * to a scroll direction → 100-300 ms freeze before scroll starts.
    */
   touch-action: pan-y;
 }
@@ -31,19 +34,17 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: #fafafa;
   touch-action: pan-y;
-  /* Prevent rubber-band bounce from locking the page on iOS/Android */
   overscroll-behavior-y: none;
 }
 
-/* Eliminate 300ms tap delay on interactive elements (does NOT override pan-y) */
+/* Remove tap highlight on interactive elements */
 a, button, [role="button"] {
   -webkit-tap-highlight-color: transparent;
 }
 
 /*
- * Horizontal scroll containers MUST override to pan-x so the compositor
- * knows these scroll sideways. Without this override they inherit pan-y
- * from body and cannot be swiped left/right.
+ * Horizontal scroll containers override to pan-x.
+ * Inherit pan-y from body would break left/right swiping.
  */
 .h-scroll {
   touch-action: pan-x;
@@ -51,33 +52,23 @@ a, button, [role="button"] {
   overscroll-behavior-x: contain;
 }
 
-/* Swiper containers: pan-y lets vertical page-scroll pass through while
-   Swiper captures horizontal swipes internally */
+/* Swiper: pan-y lets page-scroll pass through; Swiper captures horizontal */
 .swiper {
   touch-action: pan-y;
 }
 
-/* Ensure page content never hides behind the fixed mobile bottom nav */
+/* Mobile bottom nav safe area */
 @media (max-width: 899px) {
   main {
     padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
-/* MUI Drawers and Dialogs: contain their own scroll context */
+/* MUI Drawers/Dialogs: contain their own scroll */
 [class*="MuiDrawer"],
 [class*="MuiDialog"] {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-}
-
-/* Skip rendering off-screen sections on mobile */
-@media (max-width: 899px) {
-  section,
-  [data-section] {
-    content-visibility: auto;
-    contain-intrinsic-size: 0 400px;
-  }
 }
 
 /* Scrollbar */
@@ -103,26 +94,32 @@ img { max-width: 100%; height: auto; }
 .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline { border-color: #1a1a1a !important; }
 .MuiFormLabel-root.Mui-focused { color: #1a1a1a !important; }
 
-/* Animations */
+/* ── Skeleton shimmer ──────────────────────────────────────────── */
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
 }
-
 .skeleton {
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
 
+/* ── Page fade-in ──────────────────────────────────────────────── */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-
 .fade-in-up { animation: fadeInUp 0.5s ease forwards; }
 
-/* Mobile bottom nav safe area */
+/* ── Marquee strip ─────────────────────────────────────────────────
+   Defined here (not inside MUI sx) to avoid Emotion injecting a new
+   @keyframes rule on every render — which triggers style recalculation. */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
 }

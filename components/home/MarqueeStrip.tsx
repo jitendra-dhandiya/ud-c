@@ -126,11 +126,10 @@ export default function MarqueeStrip({ config = {} }: Props) {
           alignItems: 'center',
           width: 'max-content',
           // CSS keyframes animation — translate by -50% to loop the doubled items
+          /* @keyframes marquee-scroll is defined in globals.css — NOT here.
+             Defining keyframes inside sx causes Emotion to inject a new CSS
+             rule on every render, triggering style recalculation in the browser. */
           animation: `marquee-scroll ${speed}s linear infinite`,
-          '@keyframes marquee-scroll': {
-            from: { transform: 'translateX(0)' },
-            to:   { transform: 'translateX(-50%)' },
-          },
           py: 1.25,
           gap: 0,
           cursor: pauseOnHover ? 'default' : 'unset',
