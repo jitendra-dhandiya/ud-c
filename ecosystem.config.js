@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'ud-frontend',
-      script: 'node_modules/.bin/next',
+      script: './node_modules/.bin/next',
       args: 'start',
       cwd: '/var/www/ud-webiste/ud-c',
       instances: 1,
