@@ -14,7 +14,7 @@ import {
   BarChart, Settings, Image, Article, LocalOffer, Star,
   ExpandLess, ExpandMore, Menu as MenuIcon, ChevronLeft,
   Web, Collections, Tune, Policy, Logout, Person,
-  ManageAccounts, AttachMoney, Search,
+  ManageAccounts, AttachMoney, Search, LocalShipping,
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { useEffect } from 'react';
@@ -48,6 +48,14 @@ const NAV_ITEMS = [
   },
   { label: 'Coupons', icon: <LocalOffer fontSize="small" />, href: '/admin/coupons' },
   { label: 'Reviews', icon: <Star fontSize="small" />, href: '/admin/reviews' },
+  {
+    label: 'Shipping',
+    icon: <LocalShipping fontSize="small" />,
+    children: [
+      { label: 'Shipments', href: '/admin/shipping' },
+      { label: 'Settings', href: '/admin/shipping/settings' },
+    ],
+  },
   { label: 'Media', icon: <Image fontSize="small" />, href: '/admin/media' },
   { label: 'Reports', icon: <BarChart fontSize="small" />, href: '/admin/reports' },
   {

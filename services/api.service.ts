@@ -270,6 +270,41 @@ export const collectionApi = {
     api.delete(`/collections/${id}/products/${productId}`),
 };
 
+// ─── Shipping / Delhivery ──────────────────────────────────────
+export const shippingApi = {
+  // Public
+  checkServiceability: (pincode: string) =>
+    api.get('/shipping/serviceability', { params: { pincode } }),
+  getTracking: (waybill: string) =>
+    api.get(`/shipping/track/${waybill}`),
+
+  // Authenticated customer
+  getShipmentByOrder: (orderId: string) =>
+    api.get(`/shipping/order/${orderId}`),
+
+  // Admin
+  list: (params?: Record<string, unknown>) =>
+    api.get('/shipping', { params }),
+  createShipment: (orderId: string) =>
+    api.post('/shipping/create', { orderId }),
+  cancelShipment: (orderId: string) =>
+    api.post('/shipping/cancel', { orderId }),
+  schedulePickup: (waybills: string[], pickupDate?: string, pickupTime?: string) =>
+    api.post('/shipping/pickup', { waybills, pickupDate, pickupTime }),
+  getLabelUrl: (waybill: string) =>
+    api.get(`/shipping/label/${waybill}`),
+  getManifestUrl: (waybills: string[]) =>
+    api.get('/shipping/manifest', { params: { waybills: waybills.join(',') } }),
+  syncTracking: (waybill: string) =>
+    api.post(`/shipping/sync/${waybill}`),
+  getSettings: () =>
+    api.get('/shipping/settings'),
+  saveSettings: (data: object) =>
+    api.post('/shipping/settings', data),
+  getWebhookLogs: (params?: Record<string, unknown>) =>
+    api.get('/shipping/webhook-logs', { params }),
+};
+
 // ─── Media ────────────────────────────────────────────────────
 export const mediaApi = {
   getAll: (params?: Record<string, unknown>) => api.get('/media', { params }),
