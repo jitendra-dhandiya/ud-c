@@ -79,6 +79,9 @@ export default function CartDrawer() {
                       alt={item.product.name}
                       fill
                       style={{ objectFit: 'cover' }}
+                      // Fixed 80x107 box. Without sizes, next/image assumes
+                      // 100vw and fetches a ~1920w image for an 80px thumbnail.
+                      sizes="80px"
                     />
                   )}
                 </Box>

@@ -139,7 +139,9 @@ export default function ProductDetailClient({ product }: Props) {
                         '&:hover': { borderColor: '#888' },
                       }}
                     >
-                      <Image src={img.url} alt="" fill style={{ objectFit: 'cover' }} />
+                      {/* 64x85 thumbnail strip — explicit sizes keeps each of
+                          these at a few KB instead of a full-width image. */}
+                      <Image src={img.url} alt="" fill style={{ objectFit: 'cover' }} sizes="64px" />
                     </Box>
                   ))}
                 </Box>

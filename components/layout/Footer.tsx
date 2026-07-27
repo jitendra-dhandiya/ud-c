@@ -4,6 +4,9 @@ import Image from 'next/image';
 import { Box, Container, Grid, Typography, Divider, IconButton, TextField, Button, Stack } from '@mui/material';
 import { Instagram, Facebook, Twitter, YouTube, Pinterest } from '@mui/icons-material';
 
+/** Intrinsic ratio of the brand lockup — keep in step with Navbar's copy. */
+const LOGO_ASPECT = '1046 / 220';
+
 const FOOTER_LINKS = {
   'Shop': [
     { label: 'New Arrivals', href: '/shop?isNewArrival=true' },
@@ -99,13 +102,28 @@ export default function Footer({ settings = {} }: FooterProps) {
           {/* Brand */}
           <Grid item xs={12} md={4}>
             {settings.logo_url ? (
-              <Box sx={{ mb: 2 }}>
+              /**
+               * The footer sits on #0d0d0d, so it needs the light colourway —
+               * the dark wordmark would be near-invisible against it once the
+               * asset has a transparent background. `logo_url_light` is
+               * admin-configurable; falling back to the dark logo is still
+               * better than rendering nothing.
+               */
+              <Box
+                sx={{
+                  position: 'relative',
+                  height: { xs: 38, md: 46 },
+                  aspectRatio: LOGO_ASPECT,
+                  maxWidth: '100%',
+                  mb: 2,
+                }}
+              >
                 <Image
-                  src={settings.logo_url}
+                  src={settings.logo_url_light || settings.logo_url}
                   alt={siteName}
-                  width={140}
-                  height={52}
-                  style={{ objectFit: 'contain', height: 52, width: 'auto' }}
+                  fill
+                  unoptimized
+                  style={{ objectFit: 'contain', objectPosition: 'left center' }}
                 />
               </Box>
             ) : (

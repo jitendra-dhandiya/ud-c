@@ -70,8 +70,10 @@ export default function CartPage() {
                 <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                   <Box sx={{ display: 'flex', gap: 2 }}>
                     <Box sx={{ position: 'relative', width: 100, height: 130, flexShrink: 0, bgcolor: '#f5f5f5', borderRadius: 1, overflow: 'hidden' }}>
+                      {/* Fixed 100x130 box — sizes must be explicit, or
+                          next/image defaults to 100vw and over-fetches. */}
                       {item.product?.images?.[0]?.url && (
-                        <Image src={item.product.images[0].url} alt={item.product.name} fill style={{ objectFit: 'cover' }} />
+                        <Image src={item.product.images[0].url} alt={item.product.name} fill style={{ objectFit: 'cover' }} sizes="100px" />
                       )}
                     </Box>
                     <Box sx={{ flex: 1, minWidth: 0 }}>

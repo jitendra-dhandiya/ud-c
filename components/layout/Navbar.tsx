@@ -23,6 +23,25 @@ import { useAuth } from '../../hooks/useAuth';
 import { productApi } from '../../services/api.service';
 import { MegaMenuDesktop, MegaMenuMobile, type NavCategory } from './MegaMenu';
 
+/**
+ * Intrinsic aspect ratio of the brand lockup (public/logo-mark.png, 1046x220).
+ *
+ * Two problems are fixed by this asset + ratio pair:
+ *
+ *   1. The original /logo.jpg was 4500x4500 — a perfect square with ~60% white
+ *      padding. `width: auto` against a fixed height can only ever render a
+ *      square from a square source, which is why the logo looked 1:1 no matter
+ *      what width/height props were passed.
+ *
+ *   2. The artwork is a STACKED lockup (monogram above wordmark). Constraining
+ *      a stacked mark by height crushes the type: at a 72px navbar height the
+ *      wordmark rendered ~10px tall and was unreadable. It is now recomposed
+ *      horizontally — monogram left, wordmark right — legible down to 30px.
+ *
+ * Keep this value in step with the shipped asset.
+ */
+const LOGO_ASPECT = '1046 / 220';
+
 const NAV_LINKS = [
   { label: 'New In', href: '/shop?isNewArrival=true' },
   { label: 'Shop', href: '/shop' },
@@ -207,21 +226,35 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
             <Box sx={{ flexGrow: { xs: 1, md: 0 }, display: 'flex', justifyContent: { xs: 'center', md: 'flex-start' }, mr: { md: 5 } }}>
               <Link href="/" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
                 {settings.logo_url ? (
-                  <Image
-                    src={settings.logo_url}
-                    alt={settings.site_name || 'Unique Dressup'}
-                    width={520}
-                    height={160}
-                    unoptimized
-                    style={{
-                      objectFit: 'contain',
-                      objectPosition: 'left center',
-                      height: isMobile ? 48 : 72,
-                      width: 'auto',
-                      maxWidth: isMobile ? 160 : 280,
+                  /**
+                   * Height is set per breakpoint and the width follows from
+                   * aspect-ratio, so the box is reserved before the image loads
+                   * (no layout shift) and there is no useMediaQuery hydration
+                   * flash on first paint.
+                   */
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      // Widths that follow: 143px / 171px / 209px.
+                      height: { xs: 30, sm: 36, md: 44 },
+                      aspectRatio: LOGO_ASPECT,
+                      flexShrink: 0,
+                      // Never let the lockup crowd out the nav actions on a
+                      // narrow phone.
+                      maxWidth: { xs: '58vw', sm: 'none' },
                     }}
-                    priority
-                  />
+                  >
+                    <Image
+                      src={settings.logo_url}
+                      alt={settings.site_name || 'Unique Dressup'}
+                      fill
+                      // Already sized and compressed at build time; skip the
+                      // loader so we don't emit a srcset of identical URLs.
+                      unoptimized
+                      style={{ objectFit: 'contain', objectPosition: 'left center' }}
+                      priority
+                    />
+                  </Box>
                 ) : (
                   <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1 }}>
                     <Typography
@@ -474,13 +507,15 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
         <Box sx={{ width: 280 }}>
           <Box sx={{ px: 2.5, py: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
             {settings.logo_url ? (
-              <Image
-                src={settings.logo_url}
-                alt={settings.site_name || 'Unique Dressup'}
-                width={240}
-                height={80}
-                style={{ objectFit: 'contain', height: 52, width: 'auto', maxWidth: 160 }}
-              />
+              <Box sx={{ position: 'relative', height: 34, aspectRatio: LOGO_ASPECT, flexShrink: 1, minWidth: 0, maxWidth: '70%' }}>
+                <Image
+                  src={settings.logo_url}
+                  alt={settings.site_name || 'Unique Dressup'}
+                  fill
+                  unoptimized
+                  style={{ objectFit: 'contain', objectPosition: 'left center' }}
+                />
+              </Box>
             ) : (
               <Box>
                 <Typography sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 800, letterSpacing: '0.15em', fontSize: '1.15rem', textTransform: 'uppercase', lineHeight: 1 }}>
