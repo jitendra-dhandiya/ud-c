@@ -5,7 +5,7 @@ import { Box, Container, Grid, Typography, Divider, IconButton, TextField, Butto
 import { Instagram, Facebook, Twitter, YouTube, Pinterest } from '@mui/icons-material';
 
 /** Intrinsic ratio of the brand lockup — keep in step with Navbar's copy. */
-const LOGO_ASPECT = '1046 / 220';
+const LOGO_ASPECT = '1092 / 240';
 
 const FOOTER_LINKS = {
   'Shop': [

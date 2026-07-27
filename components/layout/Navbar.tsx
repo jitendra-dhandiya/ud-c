@@ -24,7 +24,7 @@ import { productApi } from '../../services/api.service';
 import { MegaMenuDesktop, MegaMenuMobile, type NavCategory } from './MegaMenu';
 
 /**
- * Intrinsic aspect ratio of the brand lockup (public/logo-mark.png, 1046x220).
+ * Intrinsic aspect ratio of the brand lockup (public/logo-mark.png, 1092x240).
  *
  * Two problems are fixed by this asset + ratio pair:
  *
@@ -40,7 +40,7 @@ import { MegaMenuDesktop, MegaMenuMobile, type NavCategory } from './MegaMenu';
  *
  * Keep this value in step with the shipped asset.
  */
-const LOGO_ASPECT = '1046 / 220';
+const LOGO_ASPECT = '1092 / 240';
 
 const NAV_LINKS = [
   { label: 'New In', href: '/shop?isNewArrival=true' },
