@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box, Typography, Button, Card, CardContent, Grid, TextField,
@@ -38,6 +38,12 @@ export default function AddProductPage() {
     initialValues: {
       name: '', description: '', basePrice: '', salePrice: '', sku: '',
       categoryId: '', collectionId: '', gender: 'UNISEX',
+      // Product-level stock. Omitting this on create used to leave the column
+      // at its schema default of 0, and order validation checks THIS field
+      // (not the variant totals) — so every newly added product was
+      // unbuyable until someone opened it in the edit screen.
+      // Blank means "derive from the variant stock below".
+      stockQuantity: '' as string | number,
       isFeatured: false, isTrending: false, isNewArrival: true, isBestSeller: false,
       material: '', careInstructions: '', fit: '', style: '',
       metaTitle: '', metaDescription: '',
@@ -50,12 +56,24 @@ export default function AddProductPage() {
     validationSchema: schema,
     onSubmit: async (values, { setSubmitting }) => {
       try {
+        // Sum of every colour/size combination entered below.
+        const variantStockTotal = (values.variants || []).reduce(
+          (sum: number, v: any) =>
+            sum + (v.sizes || []).reduce((s: number, sz: any) => s + (Number(sz.stock) || 0), 0),
+          0
+        );
+
         const fd = new FormData();
         fd.append('name', values.name);
         fd.append('description', values.description);
         fd.append('basePrice', String(values.basePrice));
         if (values.salePrice) fd.append('salePrice', String(values.salePrice));
         fd.append('sku', values.sku);
+        // Left blank → send the sum of per-size variant stock, so the product
+        // is immediately orderable rather than silently defaulting to 0.
+        fd.append('stockQuantity', String(
+          values.stockQuantity === '' ? variantStockTotal : values.stockQuantity
+        ));
         fd.append('categoryId', values.categoryId);
         if (values.collectionId) fd.append('collectionId', values.collectionId);
         fd.append('gender', values.gender);
@@ -86,6 +104,21 @@ export default function AddProductPage() {
       }
     },
   });
+
+  /**
+   * Live total of the per-colour/per-size stock entered in the Variants
+   * section. Shown as the placeholder for the product-level field and used as
+   * its value when the admin leaves it blank.
+   */
+  const variantStockTotal = useMemo(
+    () =>
+      (formik.values.variants || []).reduce(
+        (sum: number, v: any) =>
+          sum + (v.sizes || []).reduce((s: number, sz: any) => s + (Number(sz.stock) || 0), 0),
+        0
+      ),
+    [formik.values.variants]
+  );
 
   const handleImages = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -164,6 +197,22 @@ export default function AddProductPage() {
                       <TextField select label="Gender" size="small" fullWidth {...formik.getFieldProps('gender')}>
                         {GENDERS.map(g => <MenuItem key={g.value} value={g.value}>{g.label}</MenuItem>)}
                       </TextField>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <TextField
+                        label="Stock Quantity"
+                        type="number"
+                        size="small"
+                        fullWidth
+                        placeholder={String(variantStockTotal)}
+                        {...formik.getFieldProps('stockQuantity')}
+                        inputProps={{ min: 0 }}
+                        helperText={
+                          formik.values.stockQuantity === ''
+                            ? `Leave blank to use the variant total (${variantStockTotal})`
+                            : 'Checkout validates against this figure'
+                        }
+                      />
                     </Grid>
                   </Grid>
                 </CardContent>
