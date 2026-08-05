@@ -3,6 +3,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { Box, Container, Typography, IconButton } from '@mui/material';
 import { Instagram, PlayArrow, VolumeOff, VolumeUp, OpenInNew } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { buildInstagramEmbedUrl } from '../../utils/instagram';
 
 export interface InstagramReel {
   id: string;
@@ -18,10 +19,10 @@ interface Props {
   sectionTitle?: string;
 }
 
-function extractShortcode(url: string): string | null {
-  const m = url.match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
-  return m ? m[1] : null;
-}
+// Parsing lives in utils/instagram so the admin form and this component can
+// never disagree about which URLs are valid. The old local regex here only
+// accepted the singular /reel/ form and silently produced no embed for the
+// /reels/, /share/reel/ and /<username>/reel/ shapes Instagram hands out today.
 
 // ── Individual reel card ───────────────────────────────────────────
 interface ReelCardProps {
@@ -34,10 +35,7 @@ function ReelCard({ reel, index, onVideoRef }: ReelCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
   const [playing, setPlaying] = useState(false);
-  const shortcode = extractShortcode(reel.reelUrl);
-  const embedSrc = shortcode
-    ? `https://www.instagram.com/reel/${shortcode}/embed/?autoplay=1&cr=1`
-    : null;
+  const embedSrc = buildInstagramEmbedUrl(reel.reelUrl, { autoplay: true });
 
   // Register/unregister this video element with the parent observer
   useEffect(() => {

@@ -12,6 +12,8 @@ import {
   VideoLibrary, Image as ImageIcon, Link as LinkIcon, CheckCircle, Cancel,
 } from '@mui/icons-material';
 import api from '../../../../lib/axios';
+// Shared with the storefront embed so both accept exactly the same URLs.
+import { extractShortcode, buildInstagramEmbedUrl } from '../../../../utils/instagram';
 
 interface Reel {
   id: string;
@@ -114,10 +116,6 @@ export default function InstagramReelsAdminPage() {
     }
   };
 
-  const extractShortcode = (url: string) => {
-    const m = url.match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
-    return m ? m[1] : null;
-  };
 
   const field = (key: keyof Reel) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setEditReel(prev => ({ ...prev, [key]: e.target.value }));
@@ -325,7 +323,14 @@ export default function InstagramReelsAdminPage() {
             InputProps={{
               startAdornment: <InputAdornment position="start"><LinkIcon sx={{ fontSize: 16, color: '#dc2743' }} /></InputAdornment>,
             }}
-            helperText="Paste the full Instagram reel / post URL"
+            // Tell the admin immediately when a URL will not embed, instead of
+            // letting them save a reel that silently renders nothing.
+            error={!!editReel.reelUrl?.trim() && !extractShortcode(editReel.reelUrl)}
+            helperText={
+              editReel.reelUrl?.trim() && !extractShortcode(editReel.reelUrl)
+                ? 'That does not look like an Instagram reel or post link. Use Share → Copy link on the reel.'
+                : 'Paste the reel link (Share → Copy link). /reel/, /reels/ and share links all work.'
+            }
           />
 
           {/* Title */}
@@ -402,7 +407,7 @@ export default function InstagramReelsAdminPage() {
               </Typography>
               <Box sx={{ borderRadius: '12px', overflow: 'hidden', width: 160, height: 285, border: '1px solid #eee' }}>
                 <iframe
-                  src={`https://www.instagram.com/reel/${extractShortcode(editReel.reelUrl)}/embed/`}
+                  src={buildInstagramEmbedUrl(editReel.reelUrl) || ''}
                   style={{ width: '100%', height: '100%', border: 'none' }}
                   scrolling="no"
                   loading="lazy"
