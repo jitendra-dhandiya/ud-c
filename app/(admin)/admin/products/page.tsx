@@ -29,6 +29,7 @@ export default function AdminProductsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft'>('all');
   const limit = 20;
 
   useEffect(() => {
@@ -39,7 +40,14 @@ export default function AdminProductsPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const { data } = await productApi.getAll({ page, limit, search: debouncedSearch || undefined });
+      // Admin endpoint: includes drafts. The public /products hides everything
+      // inactive, which made deactivated and imported products unreachable.
+      const { data } = await productApi.getAllAdmin({
+        page,
+        limit,
+        search: debouncedSearch || undefined,
+        status: statusFilter === 'all' ? undefined : statusFilter,
+      });
       setProducts(data.data || []);
       setTotal(data.meta?.total || 0);
     } catch {
@@ -49,7 +57,9 @@ export default function AdminProductsPage() {
     }
   };
 
-  useEffect(() => { fetchProducts(); }, [page, debouncedSearch]);
+  useEffect(() => { fetchProducts(); }, [page, debouncedSearch, statusFilter]);
+  // Any filter change invalidates the current page number.
+  useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -207,6 +217,17 @@ export default function AdminProductsPage() {
               InputProps={{ startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> }}
               sx={{ maxWidth: 360, flex: 1 }}
             />
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'draft')}
+                startAdornment={<InputAdornment position="start"><FilterList fontSize="small" /></InputAdornment>}
+              >
+                <MenuItem value="all">All statuses</MenuItem>
+                <MenuItem value="active">Active only</MenuItem>
+                <MenuItem value="draft">Drafts only</MenuItem>
+              </Select>
+            </FormControl>
           </Box>
 
           {/* Table */}

@@ -23,6 +23,12 @@ export const authApi = {
 // ─── Products ─────────────────────────────────────────────────
 export const productApi = {
   getAll: (params?: Record<string, unknown>) => api.get('/products', { params }),
+  /**
+   * Admin catalogue listing. `/products` is the storefront endpoint and hides
+   * anything inactive, so an admin screen using it cannot see — or re-publish —
+   * a deactivated or newly imported draft product.
+   */
+  getAllAdmin: (params?: Record<string, unknown>) => api.get('/products/admin/list', { params }),
   getById: (id: string) => api.get(`/products/admin/${id}`),
   getBySlug: (slug: string) => api.get<{ data: Product }>(`/products/${slug}`),
   getFeatured: (opts?: { limit?: number; gender?: string | null }) =>
