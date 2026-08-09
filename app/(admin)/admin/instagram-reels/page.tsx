@@ -198,7 +198,7 @@ export default function InstagramReelsAdminPage() {
 
       {/* Info banner */}
       <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-        <strong>Upload a video or a poster image.</strong> Instagram's embed now shows a login wall to anyone not signed in to Instagram in that browser, so a reel with only a URL renders as an empty box for most visitors. A <strong>video</strong> autoplays silently; a <strong>poster image</strong> shows the frame and links to the reel. Add this section to your homepage via <strong>Homepage Builder → Add Section → Instagram Reels</strong>.
+        <strong>Upload the video to make a reel play.</strong> Instagram's embed cannot be used inside the homepage tile — it will not lay out below 326px and draws its own header and action bar, so it never fits a 9:16 card. A reel with only a URL shows a branded tile linking to Instagram. Upload the <strong>video</strong> for silent autoplay, and a <strong>poster</strong> (min 720px, vertical) for the frame shown before it loads.
       </Alert>
 
       {/* Table */}

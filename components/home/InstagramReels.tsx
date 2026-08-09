@@ -4,19 +4,6 @@ import Image from 'next/image';
 import { Box, Container, Typography, IconButton } from '@mui/material';
 import { Instagram, PlayArrow, VolumeOff, VolumeUp, OpenInNew } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { buildInstagramEmbedUrl } from '../../utils/instagram';
-
-/**
- * Instagram's embed refuses to lay out below 326px, so the iframe is rendered
- * at that width and scaled into the card rather than squeezed into it.
- * The chrome offsets are measured from Instagram's current embed markup: an
- * account header above the media and an action/caption bar below it. They are
- * approximations of markup we do not control — uploading a video or poster
- * avoids the guesswork entirely.
- */
-const EMBED_BASE_WIDTH = 326;
-const EMBED_CHROME_TOP = 54;
-const EMBED_CHROME_BOTTOM = 130;
 
 export interface InstagramReel {
   id: string;
@@ -48,7 +35,6 @@ function ReelCard({ reel, index, onVideoRef }: ReelCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
   const [playing, setPlaying] = useState(false);
-  const embedSrc = buildInstagramEmbedUrl(reel.reelUrl, { autoplay: true });
 
   // Register/unregister this video element with the parent observer
   useEffect(() => {
@@ -152,10 +138,9 @@ function ReelCard({ reel, index, onVideoRef }: ReelCardProps) {
           /**
            * Poster + click-through to Instagram.
            *
-           * Preferred over the iframe because it is ours: fixed aspect, no
-           * third-party chrome, and it goes through the image pipeline. The
-           * embed renders Instagram's own header and action bar, which cannot
-           * be styled and does not fit a 9:16 tile.
+           * Poster fallback when no video was uploaded. Ours, so it fills the
+           * tile exactly and goes through the image pipeline; tapping it opens
+           * the reel on Instagram.
            */
           <Box
             component="a"
@@ -189,53 +174,48 @@ function ReelCard({ reel, index, onVideoRef }: ReelCardProps) {
               </Box>
             </Box>
           </Box>
-        ) : embedSrc ? (
-          /**
-           * Instagram's embed enforces a 326px min-width and renders its own
-           * chrome — account header, "View profile" button, action icons and a
-           * "View more on Instagram" footer. Dropped straight into a 240px card
-           * that chrome is what you see, squashed and overlapping, instead of
-           * the reel.
-           *
-           * So the iframe is laid out at its natural width and scaled to fit,
-           * with the header cropped off the top and the footer pushed past the
-           * bottom, leaving just the media filling the tile.
-           *
-           * This is a best-effort accommodation of markup we do not control —
-           * an uploaded video or poster is the only way to be certain of the
-           * result, which is why both are offered in the admin.
-           */
-          <Box sx={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-            <Box
-              component="iframe"
-              src={embedSrc}
-              scrolling="no"
-              allowFullScreen
-              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-              loading="lazy"
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: '50%',
-                border: 'none',
-                display: 'block',
-                width: `${EMBED_BASE_WIDTH}px`,
-                // Tall enough that the footer lands below the crop window.
-                height: `${EMBED_BASE_WIDTH * (16 / 9) + EMBED_CHROME_TOP + EMBED_CHROME_BOTTOM}px`,
-                transformOrigin: 'top left',
-                // Scale the natural-width frame down to the card, then shift it
-                // up by the header height and back to centre.
-                transform: {
-                  xs: `translateX(-50%) scale(${180 / EMBED_BASE_WIDTH}) translateY(-${EMBED_CHROME_TOP}px)`,
-                  sm: `translateX(-50%) scale(${210 / EMBED_BASE_WIDTH}) translateY(-${EMBED_CHROME_TOP}px)`,
-                  md: `translateX(-50%) scale(${240 / EMBED_BASE_WIDTH}) translateY(-${EMBED_CHROME_TOP}px)`,
-                },
-                pointerEvents: 'auto',
-              }}
-            />
-          </Box>
         ) : (
-          <Box sx={{ width: '100%', height: '100%', bgcolor: '#1a1a1a' }} />
+          /**
+           * No video and no poster.
+           *
+           * Deliberately NOT Instagram's embed. That widget will not lay out
+           * below 326px and draws its own header, "View profile" button and
+           * action bar, so inside a 240px 9:16 tile the chrome is what shows
+           * rather than the reel. Scaling and cropping it was tried and drifts,
+           * because the markup belongs to Instagram and changes without notice.
+           *
+           * A tile we own always looks right. To actually PLAY a reel here,
+           * upload its video in the admin — that is the only path that gives a
+           * clean autoplaying result.
+           */
+          <Box
+            component="a"
+            href={reel.reelUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', gap: 1.5,
+              width: '100%', height: '100%', textDecoration: 'none',
+              background: 'linear-gradient(140deg, #f09433 0%, #dc2743 45%, #bc1888 100%)',
+            }}
+          >
+            <Box sx={{
+              width: 54, height: 54, borderRadius: '50%',
+              bgcolor: 'rgba(255,255,255,0.18)',
+              border: '2px solid rgba(255,255,255,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <PlayArrow sx={{ color: 'white', fontSize: 30 }} />
+            </Box>
+            <Typography sx={{
+              color: 'white', fontSize: '0.72rem', fontWeight: 700,
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+              textAlign: 'center', px: 2, lineHeight: 1.4,
+            }}>
+              {reel.title || 'Watch on Instagram'}
+            </Typography>
+          </Box>
         )}
 
         {/* Gradient overlay */}
