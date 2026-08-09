@@ -45,6 +45,9 @@ export default function InstagramReelsAdminPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [snack, setSnack] = useState<{ msg: string; sev: 'success' | 'error' } | null>(null);
+  // Uploaded files take precedence over the URL fields on submit.
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [thumbFile, setThumbFile] = useState<File | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -63,12 +66,16 @@ export default function InstagramReelsAdminPage() {
   const openAdd = () => {
     setEditReel({ ...EMPTY, sortOrder: reels.length });
     setEditingId(null);
+    setVideoFile(null);
+    setThumbFile(null);
     setDialogOpen(true);
   };
 
   const openEdit = (r: Reel) => {
     setEditReel({ ...r });
     setEditingId(r.id);
+    setVideoFile(null);
+    setThumbFile(null);
     setDialogOpen(true);
   };
 
@@ -79,17 +86,40 @@ export default function InstagramReelsAdminPage() {
     }
     setSaving(true);
     try {
+      // Multipart only when a file is attached; otherwise keep the plain JSON
+      // path so nothing about the existing URL-only flow changes.
+      const hasFiles = !!(videoFile || thumbFile);
+      let payload: any = editReel;
+      let config: any = undefined;
+
+      if (hasFiles) {
+        const fd = new FormData();
+        fd.append('reelUrl', editReel.reelUrl || '');
+        fd.append('title', editReel.title || '');
+        fd.append('caption', editReel.caption || '');
+        fd.append('isActive', String(editReel.isActive !== false));
+        fd.append('sortOrder', String(editReel.sortOrder ?? 0));
+        if (!videoFile && editReel.videoUrl) fd.append('videoUrl', editReel.videoUrl);
+        if (!thumbFile && editReel.thumbnail) fd.append('thumbnail', editReel.thumbnail);
+        if (videoFile) fd.append('video', videoFile);
+        if (thumbFile) fd.append('thumbnail', thumbFile);
+        payload = fd;
+        config = { headers: { 'Content-Type': 'multipart/form-data' } };
+      }
+
       if (editingId) {
-        await api.put(`/instagram-reels/${editingId}`, editReel);
+        await api.put(`/instagram-reels/${editingId}`, payload, config);
         setSnack({ msg: 'Reel updated', sev: 'success' });
       } else {
-        await api.post('/instagram-reels', editReel);
+        await api.post('/instagram-reels', payload, config);
         setSnack({ msg: 'Reel added', sev: 'success' });
       }
       setDialogOpen(false);
       load();
-    } catch {
-      setSnack({ msg: 'Failed to save reel', sev: 'error' });
+    } catch (e: any) {
+      // The generic message used to hide the real cause (bad URL, file too
+      // large, wrong type), which made failures impossible to act on.
+      setSnack({ msg: e?.response?.data?.message || 'Failed to save reel', sev: 'error' });
     } finally {
       setSaving(false);
     }
@@ -168,8 +198,7 @@ export default function InstagramReelsAdminPage() {
 
       {/* Info banner */}
       <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-        <strong>Two display modes:</strong> If you add a <strong>Direct Video URL</strong>, it will auto-play silently on the homepage.
-        Otherwise the reel shows as an Instagram embed. Add this section to your homepage via <strong>Homepage Builder → Add Section → Instagram Reels</strong>.
+        <strong>Upload a video or a poster image.</strong> Instagram's embed now shows a login wall to anyone not signed in to Instagram in that browser, so a reel with only a URL renders as an empty box for most visitors. A <strong>video</strong> autoplays silently; a <strong>poster image</strong> shows the frame and links to the reel. Add this section to your homepage via <strong>Homepage Builder → Add Section → Instagram Reels</strong>.
       </Alert>
 
       {/* Table */}
@@ -363,8 +392,28 @@ export default function InstagramReelsAdminPage() {
               InputProps={{
                 startAdornment: <InputAdornment position="start"><VideoLibrary sx={{ fontSize: 16, color: '#1565c0' }} /></InputAdornment>,
               }}
-              helperText="Upload video to your Media Library and paste the URL here for seamless autoplay. Leave blank to use Instagram embed."
+              helperText="Or upload a file below. Autoplays silently on the homepage."
             />
+            <Button
+              component="label"
+              variant="outlined"
+              size="small"
+              startIcon={<VideoLibrary />}
+              sx={{ mt: 1, borderColor: '#ccc', color: 'text.primary' }}
+            >
+              {videoFile ? `${videoFile.name.slice(0, 28)} (${(videoFile.size / 1048576).toFixed(1)} MB)` : 'Upload video file'}
+              <input
+                hidden
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime"
+                onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+              />
+            </Button>
+            {videoFile && (
+              <Button size="small" onClick={() => setVideoFile(null)} sx={{ mt: 1, ml: 1, color: '#d32f2f' }}>
+                Remove
+              </Button>
+            )}
           </Box>
 
           {/* Thumbnail */}
@@ -377,8 +426,30 @@ export default function InstagramReelsAdminPage() {
             InputProps={{
               startAdornment: <InputAdornment position="start"><ImageIcon sx={{ fontSize: 16, color: '#555' }} /></InputAdornment>,
             }}
-            helperText="Shown while the video loads or as fallback"
+            helperText="Shown while the video loads, and instead of the Instagram embed when no video is set."
           />
+          <Box sx={{ mt: -1 }}>
+            <Button
+              component="label"
+              variant="outlined"
+              size="small"
+              startIcon={<ImageIcon />}
+              sx={{ borderColor: '#ccc', color: 'text.primary' }}
+            >
+              {thumbFile ? `${thumbFile.name.slice(0, 28)}` : 'Upload poster image'}
+              <input
+                hidden
+                type="file"
+                accept="image/*"
+                onChange={(e) => setThumbFile(e.target.files?.[0] || null)}
+              />
+            </Button>
+            {thumbFile && (
+              <Button size="small" onClick={() => setThumbFile(null)} sx={{ ml: 1, color: '#d32f2f' }}>
+                Remove
+              </Button>
+            )}
+          </Box>
 
           <Box sx={{ display: 'flex', gap: 2 }}>
             <TextField

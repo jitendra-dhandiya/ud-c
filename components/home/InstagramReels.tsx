@@ -135,7 +135,46 @@ function ReelCard({ reel, index, onVideoRef }: ReelCardProps) {
               </Box>
             )}
           </>
+        ) : reel.thumbnail ? (
+          /**
+           * Poster + click-through to Instagram.
+           *
+           * Preferred over the iframe because Instagram's /embed/ endpoint now
+           * returns a login wall for anyone not signed in on that browser —
+           * fetched server-side it contains no <video> at all. A real poster
+           * always renders, and tapping it opens the reel on Instagram.
+           */
+          <Box
+            component="a"
+            href={reel.reelUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{ display: 'block', width: '100%', height: '100%', position: 'relative' }}
+          >
+            <Box
+              component="img"
+              src={reel.thumbnail}
+              alt={reel.title || 'Instagram reel'}
+              loading="lazy"
+              sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+            <Box sx={{
+              position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Box sx={{
+                bgcolor: 'rgba(0,0,0,0.45)', borderRadius: '50%', width: 52, height: 52,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                backdropFilter: 'blur(2px)',
+              }}>
+                <PlayArrow sx={{ color: 'white', fontSize: 30 }} />
+              </Box>
+            </Box>
+          </Box>
         ) : embedSrc ? (
+          // Last resort. Renders for viewers already signed in to Instagram;
+          // everyone else sees Instagram's login wall inside the frame, which
+          // is why an uploaded video or poster is strongly preferred.
           <iframe
             src={embedSrc}
             style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
