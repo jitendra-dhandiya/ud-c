@@ -49,6 +49,23 @@ export const extractShortcode = (url: string | null | undefined): string | null 
   parseInstagramUrl(url)?.shortcode ?? null;
 
 /**
+ * Reduce anything an admin might paste down to a canonical reel URL.
+ *
+ * People reasonably paste Instagram's "Copy embed code" output — a ~6KB
+ * <blockquote> plus a <script> tag. The URL pattern happens to match inside it,
+ * so it would "work", but the whole blob would be stored in reelUrl and the
+ * card's "View on Instagram" link uses that field as its href, which would
+ * break. Share text with surrounding words has the same problem.
+ *
+ * Returns null when there is no Instagram link anywhere in the input.
+ */
+export const normalizeInstagramUrl = (input: string | null | undefined): string | null => {
+  const parsed = parseInstagramUrl(input);
+  if (!parsed) return null;
+  return `https://www.instagram.com/${parsed.type}/${parsed.shortcode}/`;
+};
+
+/**
  * Build the iframe src for a reel/post. Preserves the media type, because
  * embedding a feed post under /reel/ returns Instagram's "unavailable" page.
  */

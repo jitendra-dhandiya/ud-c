@@ -6,6 +6,18 @@ import { Instagram, PlayArrow, VolumeOff, VolumeUp, OpenInNew } from '@mui/icons
 import { motion } from 'framer-motion';
 import { buildInstagramEmbedUrl } from '../../utils/instagram';
 
+/**
+ * Instagram's embed refuses to lay out below 326px, so the iframe is rendered
+ * at that width and scaled into the card rather than squeezed into it.
+ * The chrome offsets are measured from Instagram's current embed markup: an
+ * account header above the media and an action/caption bar below it. They are
+ * approximations of markup we do not control — uploading a video or poster
+ * avoids the guesswork entirely.
+ */
+const EMBED_BASE_WIDTH = 326;
+const EMBED_CHROME_TOP = 54;
+const EMBED_CHROME_BOTTOM = 130;
+
 export interface InstagramReel {
   id: string;
   title?: string | null;
@@ -140,10 +152,10 @@ function ReelCard({ reel, index, onVideoRef }: ReelCardProps) {
           /**
            * Poster + click-through to Instagram.
            *
-           * Preferred over the iframe because Instagram's /embed/ endpoint now
-           * returns a login wall for anyone not signed in on that browser —
-           * fetched server-side it contains no <video> at all. A real poster
-           * always renders, and tapping it opens the reel on Instagram.
+           * Preferred over the iframe because it is ours: fixed aspect, no
+           * third-party chrome, and it goes through the image pipeline. The
+           * embed renders Instagram's own header and action bar, which cannot
+           * be styled and does not fit a 9:16 tile.
            */
           <Box
             component="a"
@@ -178,17 +190,50 @@ function ReelCard({ reel, index, onVideoRef }: ReelCardProps) {
             </Box>
           </Box>
         ) : embedSrc ? (
-          // Last resort. Renders for viewers already signed in to Instagram;
-          // everyone else sees Instagram's login wall inside the frame, which
-          // is why an uploaded video or poster is strongly preferred.
-          <iframe
-            src={embedSrc}
-            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-            scrolling="no"
-            allowFullScreen
-            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-            loading="lazy"
-          />
+          /**
+           * Instagram's embed enforces a 326px min-width and renders its own
+           * chrome — account header, "View profile" button, action icons and a
+           * "View more on Instagram" footer. Dropped straight into a 240px card
+           * that chrome is what you see, squashed and overlapping, instead of
+           * the reel.
+           *
+           * So the iframe is laid out at its natural width and scaled to fit,
+           * with the header cropped off the top and the footer pushed past the
+           * bottom, leaving just the media filling the tile.
+           *
+           * This is a best-effort accommodation of markup we do not control —
+           * an uploaded video or poster is the only way to be certain of the
+           * result, which is why both are offered in the admin.
+           */
+          <Box sx={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+            <Box
+              component="iframe"
+              src={embedSrc}
+              scrolling="no"
+              allowFullScreen
+              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+              loading="lazy"
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: '50%',
+                border: 'none',
+                display: 'block',
+                width: `${EMBED_BASE_WIDTH}px`,
+                // Tall enough that the footer lands below the crop window.
+                height: `${EMBED_BASE_WIDTH * (16 / 9) + EMBED_CHROME_TOP + EMBED_CHROME_BOTTOM}px`,
+                transformOrigin: 'top left',
+                // Scale the natural-width frame down to the card, then shift it
+                // up by the header height and back to centre.
+                transform: {
+                  xs: `translateX(-50%) scale(${180 / EMBED_BASE_WIDTH}) translateY(-${EMBED_CHROME_TOP}px)`,
+                  sm: `translateX(-50%) scale(${210 / EMBED_BASE_WIDTH}) translateY(-${EMBED_CHROME_TOP}px)`,
+                  md: `translateX(-50%) scale(${240 / EMBED_BASE_WIDTH}) translateY(-${EMBED_CHROME_TOP}px)`,
+                },
+                pointerEvents: 'auto',
+              }}
+            />
+          </Box>
         ) : (
           <Box sx={{ width: '100%', height: '100%', bgcolor: '#1a1a1a' }} />
         )}
@@ -360,6 +405,9 @@ export default function InstagramReels({ reels, sectionTitle }: Props) {
           sx={{
             display: 'flex',
             gap: { xs: 1.5, md: 2 },
+            // A single card left-aligned in a full-width container reads as a
+            // layout bug. Centre until there are enough to fill the row.
+            justifyContent: { xs: 'flex-start', md: reels.length < 5 ? 'center' : 'flex-start' },
             overflowX: 'auto',
             pb: 1,
             mx: { xs: -2, md: 0 },
