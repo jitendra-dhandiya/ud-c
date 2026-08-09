@@ -1,5 +1,6 @@
 'use client';
 import { useRef, useEffect, useState, useCallback } from 'react';
+import Image from 'next/image';
 import { Box, Container, Typography, IconButton } from '@mui/material';
 import { Instagram, PlayArrow, VolumeOff, VolumeUp, OpenInNew } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -151,12 +152,17 @@ function ReelCard({ reel, index, onVideoRef }: ReelCardProps) {
             rel="noopener noreferrer"
             sx={{ display: 'block', width: '100%', height: '100%', position: 'relative' }}
           >
-            <Box
-              component="img"
+            {/* next/image so the poster goes through the derivative pipeline —
+                a raw <img> here served the full-size original to every visitor,
+                which defeats the point of uploading a high-resolution poster.
+                sizes matches the card widths below (180/210/240). */}
+            <Image
               src={reel.thumbnail}
               alt={reel.title || 'Instagram reel'}
+              fill
+              sizes="(max-width: 600px) 180px, (max-width: 900px) 210px, 240px"
+              style={{ objectFit: 'cover' }}
               loading="lazy"
-              sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
             <Box sx={{
               position: 'absolute', inset: 0,

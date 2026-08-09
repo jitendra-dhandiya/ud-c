@@ -426,7 +426,7 @@ export default function InstagramReelsAdminPage() {
             InputProps={{
               startAdornment: <InputAdornment position="start"><ImageIcon sx={{ fontSize: 16, color: '#555' }} /></InputAdornment>,
             }}
-            helperText="Shown while the video loads, and instead of the Instagram embed when no video is set."
+            helperText="Shown while the video loads, and instead of the Instagram embed when no video is set. Minimum 720px wide, vertical 9:16 — a screenshot of the reel at full size works well."
           />
           <Box sx={{ mt: -1 }}>
             <Button
@@ -441,7 +441,30 @@ export default function InstagramReelsAdminPage() {
                 hidden
                 type="file"
                 accept="image/*"
-                onChange={(e) => setThumbFile(e.target.files?.[0] || null)}
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  setThumbFile(f);
+                  if (!f) return;
+                  // Read the dimensions locally so an undersized poster is
+                  // caught instantly rather than after a failed upload.
+                  const img = new window.Image();
+                  img.onload = () => {
+                    if (img.width < 720) {
+                      setSnack({
+                        msg: `Poster is only ${img.width}x${img.height}px. It needs to be at least 720px wide or it will look blurry.`,
+                        sev: 'error',
+                      });
+                      setThumbFile(null);
+                    } else if (img.height / img.width < 1.2) {
+                      setSnack({
+                        msg: `Poster is ${img.width}x${img.height}px. Reels are vertical (9:16) — a landscape image will be cropped heavily.`,
+                        sev: 'error',
+                      });
+                    }
+                    URL.revokeObjectURL(img.src);
+                  };
+                  img.src = URL.createObjectURL(f);
+                }}
               />
             </Button>
             {thumbFile && (
