@@ -13,7 +13,6 @@ import {
 } from '@mui/icons-material';
 import api from '../../../../lib/axios';
 // Shared with the storefront embed so both accept exactly the same URLs.
-import { extractShortcode, buildInstagramEmbedUrl } from '../../../../utils/instagram';
 
 interface Reel {
   id: string;
@@ -80,8 +79,9 @@ export default function InstagramReelsAdminPage() {
   };
 
   const save = async () => {
-    if (!editReel.reelUrl?.trim()) {
-      setSnack({ msg: 'Instagram Reel URL is required', sev: 'error' });
+    // The video is the reel now — without one there is nothing to play.
+    if (!editingId && !videoFile) {
+      setSnack({ msg: 'Please upload a video file — that is what plays on the homepage.', sev: 'error' });
       return;
     }
     setSaving(true);
@@ -185,7 +185,7 @@ export default function InstagramReelsAdminPage() {
           { label: 'Total Reels', value: reels.length, color: '#1a1a1a' },
           { label: 'Active', value: reels.filter(r => r.isActive).length, color: '#2e7d32' },
           { label: 'With Video', value: reels.filter(r => r.videoUrl).length, color: '#1565c0' },
-          { label: 'Embed Only', value: reels.filter(r => !r.videoUrl).length, color: '#e65100' },
+          { label: 'Missing Video', value: reels.filter(r => !r.videoUrl).length, color: '#e65100' },
         ].map(stat => (
           <Grid item xs={6} sm={3} key={stat.label}>
             <Card sx={{ p: 2, borderRadius: 2, borderLeft: `4px solid ${stat.color}` }}>
@@ -198,7 +198,7 @@ export default function InstagramReelsAdminPage() {
 
       {/* Info banner */}
       <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-        <strong>Upload the video to make a reel play.</strong> Instagram's embed cannot be used inside the homepage tile — it will not lay out below 326px and draws its own header and action bar, so it never fits a 9:16 card. A reel with only a URL shows a branded tile linking to Instagram. Upload the <strong>video</strong> for silent autoplay, and a <strong>poster</strong> (min 720px, vertical) for the frame shown before it loads.
+        <strong>Upload the video — that is the reel.</strong> It plays on hover on the homepage, muted, and is re-encoded on upload to a web-optimised 720px version so it starts instantly instead of buffering. The poster frame is generated automatically. Minimum 720px wide, vertical 9:16 — use the original file.
       </Alert>
 
       {/* Table */}
@@ -227,7 +227,6 @@ export default function InstagramReelsAdminPage() {
             </TableHead>
             <TableBody>
               {reels.map((reel, i) => {
-                const sc = extractShortcode(reel.reelUrl);
                 return (
                   <TableRow key={reel.id} sx={{ '&:hover': { bgcolor: '#fafafa' } }}>
                     <TableCell>
@@ -250,14 +249,16 @@ export default function InstagramReelsAdminPage() {
                             src={reel.thumbnail}
                             sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
-                        ) : sc ? (
+                        ) : (
+                          // No poster means no video was uploaded, since a
+                          // poster is always extracted from one.
                           <Box sx={{
                             width: '100%', height: '100%',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                           }}>
-                            <Instagram sx={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }} />
+                            <VideoLibrary sx={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }} />
                           </Box>
-                        ) : null}
+                        )}
                       </Box>
                     </TableCell>
 
@@ -344,8 +345,8 @@ export default function InstagramReelsAdminPage() {
 
           {/* Instagram Reel URL */}
           <TextField
-            label="Instagram Reel URL *"
-            placeholder="https://www.instagram.com/reel/ABC123/"
+            label="Redirect URL (optional)"
+            placeholder="https://www.instagram.com/reel/... or any product/page link"
             value={editReel.reelUrl || ''}
             onChange={field('reelUrl')}
             fullWidth size="small"
@@ -354,12 +355,7 @@ export default function InstagramReelsAdminPage() {
             }}
             // Tell the admin immediately when a URL will not embed, instead of
             // letting them save a reel that silently renders nothing.
-            error={!!editReel.reelUrl?.trim() && !extractShortcode(editReel.reelUrl)}
-            helperText={
-              editReel.reelUrl?.trim() && !extractShortcode(editReel.reelUrl)
-                ? 'That does not look like an Instagram reel or post link. Use Share → Copy link on the reel.'
-                : 'Paste the reel link (Share → Copy link). /reel/, /reels/ and share links all work.'
-            }
+            helperText="Where the tile goes when clicked. Leave blank and the tile simply is not clickable."
           />
 
           {/* Title */}
@@ -384,7 +380,7 @@ export default function InstagramReelsAdminPage() {
           {/* Direct Video URL */}
           <Box>
             <TextField
-              label="Direct Video URL (for Auto-play)"
+              label="Video URL (if already hosted)"
               placeholder="https://cdn.example.com/video.mp4"
               value={editReel.videoUrl || ''}
               onChange={field('videoUrl')}
@@ -401,7 +397,7 @@ export default function InstagramReelsAdminPage() {
               startIcon={<VideoLibrary />}
               sx={{ mt: 1, borderColor: '#ccc', color: 'text.primary' }}
             >
-              {videoFile ? `${videoFile.name.slice(0, 28)} (${(videoFile.size / 1048576).toFixed(1)} MB)` : 'Upload video file'}
+              {videoFile ? `${videoFile.name.slice(0, 28)} (${(videoFile.size / 1048576).toFixed(1)} MB)` : 'Upload video file *'}
               <input
                 hidden
                 type="file"
@@ -426,7 +422,7 @@ export default function InstagramReelsAdminPage() {
             InputProps={{
               startAdornment: <InputAdornment position="start"><ImageIcon sx={{ fontSize: 16, color: '#555' }} /></InputAdornment>,
             }}
-            helperText="Shown while the video loads, and instead of the Instagram embed when no video is set. Minimum 720px wide, vertical 9:16 — a screenshot of the reel at full size works well."
+            helperText="Optional — generated from the video automatically. Upload one only to override it. Minimum 720px wide, vertical 9:16."
           />
           <Box sx={{ mt: -1 }}>
             <Button
@@ -493,20 +489,25 @@ export default function InstagramReelsAdminPage() {
             />
           </Box>
 
-          {/* Live preview */}
-          {editReel.reelUrl && extractShortcode(editReel.reelUrl) && !editReel.videoUrl && (
+          {/* Preview of what will actually play on the homepage */}
+          {(videoFile || editReel.videoUrl) && (
             <Box>
               <Typography variant="caption" fontWeight={700} sx={{ display: 'block', mb: 1, color: '#555' }}>
-                EMBED PREVIEW
+                PREVIEW
               </Typography>
-              <Box sx={{ borderRadius: '12px', overflow: 'hidden', width: 160, height: 285, border: '1px solid #eee' }}>
-                <iframe
-                  src={buildInstagramEmbedUrl(editReel.reelUrl) || ''}
-                  style={{ width: '100%', height: '100%', border: 'none' }}
-                  scrolling="no"
-                  loading="lazy"
+              <Box sx={{ borderRadius: '12px', overflow: 'hidden', width: 160, height: 285, border: '1px solid #eee', bgcolor: '#111' }}>
+                <video
+                  src={videoFile ? URL.createObjectURL(videoFile) : editReel.videoUrl}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  muted
+                  loop
+                  playsInline
+                  autoPlay
                 />
               </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                Plays on hover on the homepage.
+              </Typography>
             </Box>
           )}
         </DialogContent>

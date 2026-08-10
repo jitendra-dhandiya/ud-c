@@ -19,51 +19,60 @@ interface Props {
   sectionTitle?: string;
 }
 
-// Parsing lives in utils/instagram so the admin form and this component can
-// never disagree about which URLs are valid. The old local regex here only
-// accepted the singular /reel/ form and silently produced no embed for the
-// /reels/, /share/reel/ and /<username>/reel/ shapes Instagram hands out today.
-
 // ── Individual reel card ───────────────────────────────────────────
 interface ReelCardProps {
   reel: InstagramReel;
   index: number;
-  onVideoRef: (id: string, el: HTMLVideoElement | null) => void;
 }
 
-function ReelCard({ reel, index, onVideoRef }: ReelCardProps) {
+function ReelCard({ reel, index }: ReelCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
   const [playing, setPlaying] = useState(false);
 
-  // Register/unregister this video element with the parent observer
-  useEffect(() => {
-    if (!reel.videoUrl) return;
-    const el = videoRef.current;
-    onVideoRef(reel.id, el);
-    return () => onVideoRef(reel.id, null);
-  }, [reel.id, reel.videoUrl, onVideoRef]);
-
-  // Listen for custom play/pause events dispatched by the parent observer
-  useEffect(() => {
+  // Play on hover, pause and rewind on leave.
+  //
+  // preload="none" means the file is not fetched until this fires, so a page of
+  // tiles costs nothing until the visitor shows intent. On touch devices there
+  // is no hover, so the first tap plays and the second follows the link.
+  const handleEnter = useCallback(() => {
     const el = videoRef.current;
     if (!el) return;
-
-    const handlePlay = () => {
-      el.play().then(() => setPlaying(true)).catch(() => {});
-    };
-    const handlePause = () => {
-      el.pause();
-      setPlaying(false);
-    };
-
-    el.addEventListener('reel:play', handlePlay);
-    el.addEventListener('reel:pause', handlePause);
-    return () => {
-      el.removeEventListener('reel:play', handlePlay);
-      el.removeEventListener('reel:pause', handlePause);
-    };
+    el.play().then(() => setPlaying(true)).catch(() => {});
   }, []);
+
+  const handleLeave = useCallback(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    el.pause();
+    el.currentTime = 0;
+    setPlaying(false);
+  }, []);
+
+  /**
+   * Clicking the tile follows the redirect the admin set. It is optional: when
+   * blank the tile is simply not a link, rather than navigating nowhere.
+   */
+  const handleOpen = useCallback(() => {
+    const target = reel.reelUrl?.trim();
+    if (!target) return;
+    window.open(target, '_blank', 'noopener,noreferrer');
+  }, [reel.reelUrl]);
+
+  // Touch devices get no hover, so play once the tile scrolls into view.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !window.matchMedia('(hover: none)').matches) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) el.play().then(() => setPlaying(true)).catch(() => {});
+        else { el.pause(); setPlaying(false); }
+      },
+      { threshold: 0.6 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [reel.videoUrl]);
 
   return (
     <motion.div
@@ -74,6 +83,9 @@ function ReelCard({ reel, index, onVideoRef }: ReelCardProps) {
       style={{ flexShrink: 0 }}
     >
       <Box
+        onMouseEnter={handleEnter}
+        onMouseLeave={handleLeave}
+        onClick={handleOpen}
         sx={{
           width: { xs: 180, sm: 210, md: 240 },
           borderRadius: '16px',
@@ -81,7 +93,7 @@ function ReelCard({ reel, index, onVideoRef }: ReelCardProps) {
           position: 'relative',
           aspectRatio: '9 / 16',
           bgcolor: '#111',
-          cursor: 'pointer',
+          cursor: reel.reelUrl?.trim() ? 'pointer' : 'default',
           boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
           '&:hover .reel-overlay': { opacity: 1 },
           '&:hover .reel-scale': { transform: 'scale(1.03)' },
@@ -89,133 +101,71 @@ function ReelCard({ reel, index, onVideoRef }: ReelCardProps) {
           '&:hover': { boxShadow: '0 16px 48px rgba(0,0,0,0.28)' },
         }}
       >
-        {reel.videoUrl ? (
-          <>
-            <video
-              ref={videoRef}
-              src={reel.videoUrl}
-              className="reel-scale"
-              poster={reel.thumbnail || undefined}
-              muted={muted}
-              loop
-              playsInline
-              preload="none"
-              style={{
-                width: '100%', height: '100%',
-                objectFit: 'cover', display: 'block',
-                transition: 'transform 0.4s ease',
-              }}
-            />
-            <IconButton
-              size="small"
-              onClick={(e) => { e.stopPropagation(); setMuted(!muted); }}
-              sx={{
-                position: 'absolute', bottom: 52, right: 8,
-                bgcolor: 'rgba(0,0,0,0.55)', color: 'white',
-                width: 28, height: 28,
-                '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
-              }}
-            >
-              {muted ? <VolumeOff sx={{ fontSize: 14 }} /> : <VolumeUp sx={{ fontSize: 14 }} />}
-            </IconButton>
-            {!playing && (
-              <Box sx={{
-                position: 'absolute', inset: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                pointerEvents: 'none',
-              }}>
-                <Box sx={{
-                  bgcolor: 'rgba(0,0,0,0.45)', borderRadius: '50%',
-                  width: 52, height: 52,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <PlayArrow sx={{ color: 'white', fontSize: 30 }} />
-                </Box>
-              </Box>
-            )}
-          </>
-        ) : reel.thumbnail ? (
-          /**
-           * Poster + click-through to Instagram.
-           *
-           * Poster fallback when no video was uploaded. Ours, so it fills the
-           * tile exactly and goes through the image pipeline; tapping it opens
-           * the reel on Instagram.
-           */
-          <Box
-            component="a"
-            href={reel.reelUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            sx={{ display: 'block', width: '100%', height: '100%', position: 'relative' }}
-          >
-            {/* next/image so the poster goes through the derivative pipeline —
-                a raw <img> here served the full-size original to every visitor,
-                which defeats the point of uploading a high-resolution poster.
-                sizes matches the card widths below (180/210/240). */}
-            <Image
-              src={reel.thumbnail}
-              alt={reel.title || 'Instagram reel'}
-              fill
-              sizes="(max-width: 600px) 180px, (max-width: 900px) 210px, 240px"
-              style={{ objectFit: 'cover' }}
-              loading="lazy"
-            />
-            <Box sx={{
+        {/* Poster underneath: always painted, so the tile never shows a
+            black box while the video loads. Goes through next/image, so a
+            1080x1920 upload is delivered as a ~240px AVIF. */}
+        {reel.thumbnail && (
+          <Image
+            src={reel.thumbnail}
+            alt={reel.title || 'Reel'}
+            fill
+            sizes="(max-width: 600px) 180px, (max-width: 900px) 210px, 240px"
+            style={{ objectFit: 'cover' }}
+            loading="lazy"
+          />
+        )}
+
+        {/* Video layered on top. preload="none" means nothing is fetched until
+            the visitor actually hovers — 20 tiles cost zero bandwidth at rest. */}
+        {reel.videoUrl && (
+          <video
+            ref={videoRef}
+            src={reel.videoUrl}
+            poster={reel.thumbnail || undefined}
+            muted={muted}
+            loop
+            playsInline
+            preload="none"
+            style={{
               position: 'absolute', inset: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Box sx={{
-                bgcolor: 'rgba(0,0,0,0.45)', borderRadius: '50%', width: 52, height: 52,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                backdropFilter: 'blur(2px)',
-              }}>
-                <PlayArrow sx={{ color: 'white', fontSize: 30 }} />
-              </Box>
-            </Box>
-          </Box>
-        ) : (
-          /**
-           * No video and no poster.
-           *
-           * Deliberately NOT Instagram's embed. That widget will not lay out
-           * below 326px and draws its own header, "View profile" button and
-           * action bar, so inside a 240px 9:16 tile the chrome is what shows
-           * rather than the reel. Scaling and cropping it was tried and drifts,
-           * because the markup belongs to Instagram and changes without notice.
-           *
-           * A tile we own always looks right. To actually PLAY a reel here,
-           * upload its video in the admin — that is the only path that gives a
-           * clean autoplaying result.
-           */
-          <Box
-            component="a"
-            href={reel.reelUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            sx={{
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', gap: 1.5,
-              width: '100%', height: '100%', textDecoration: 'none',
-              background: 'linear-gradient(140deg, #f09433 0%, #dc2743 45%, #bc1888 100%)',
+              width: '100%', height: '100%',
+              objectFit: 'cover',
+              opacity: playing ? 1 : 0,
+              transition: 'opacity 0.25s ease',
             }}
-          >
+          />
+        )}
+
+        {/* Play affordance, hidden once the video is actually running */}
+        {!playing && (
+          <Box sx={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            pointerEvents: 'none',
+          }}>
             <Box sx={{
-              width: 54, height: 54, borderRadius: '50%',
-              bgcolor: 'rgba(255,255,255,0.18)',
-              border: '2px solid rgba(255,255,255,0.5)',
+              bgcolor: 'rgba(0,0,0,0.45)', borderRadius: '50%',
+              width: 52, height: 52,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <PlayArrow sx={{ color: 'white', fontSize: 30 }} />
             </Box>
-            <Typography sx={{
-              color: 'white', fontSize: '0.72rem', fontWeight: 700,
-              letterSpacing: '0.08em', textTransform: 'uppercase',
-              textAlign: 'center', px: 2, lineHeight: 1.4,
-            }}>
-              {reel.title || 'Watch on Instagram'}
-            </Typography>
           </Box>
+        )}
+
+        {reel.videoUrl && (
+          <IconButton
+            size="small"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMuted(!muted); }}
+            sx={{
+              position: 'absolute', bottom: 52, right: 8, zIndex: 2,
+              bgcolor: 'rgba(0,0,0,0.55)', color: 'white',
+              width: 28, height: 28,
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' },
+            }}
+          >
+            {muted ? <VolumeOff sx={{ fontSize: 14 }} /> : <VolumeUp sx={{ fontSize: 14 }} />}
+          </IconButton>
         )}
 
         {/* Gradient overlay */}
@@ -253,6 +203,7 @@ function ReelCard({ reel, index, onVideoRef }: ReelCardProps) {
               {reel.title}
             </Typography>
           )}
+          {reel.reelUrl?.trim() && (
           <Box
             component="a"
             href={reel.reelUrl}
@@ -269,60 +220,18 @@ function ReelCard({ reel, index, onVideoRef }: ReelCardProps) {
             View on Instagram
             <OpenInNew sx={{ fontSize: 10 }} />
           </Box>
+          )}
         </Box>
       </Box>
     </motion.div>
   );
 }
 
-// ── Parent: single shared IntersectionObserver, max 1 playing ─────
+// ── Parent ────────────────────────────────────────────────────────
 export default function InstagramReels({ reels, sectionTitle }: Props) {
-  // Map of reel id → video element
-  const videoMapRef = useRef<Map<string, HTMLVideoElement>>(new Map());
-  // Currently playing video element
-  const currentlyPlayingRef = useRef<HTMLVideoElement | null>(null);
-
-
-  // Single IntersectionObserver — created once, cards observe/unobserve themselves
-  const obsRef = useRef<IntersectionObserver | null>(null);
-
-  useEffect(() => {
-    obsRef.current = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          const el = entry.target as HTMLVideoElement;
-          if (entry.isIntersecting) {
-            if (currentlyPlayingRef.current && currentlyPlayingRef.current !== el) {
-              currentlyPlayingRef.current.dispatchEvent(new Event('reel:pause'));
-            }
-            currentlyPlayingRef.current = el;
-            el.dispatchEvent(new Event('reel:play'));
-          } else {
-            if (currentlyPlayingRef.current === el) {
-              el.dispatchEvent(new Event('reel:pause'));
-              currentlyPlayingRef.current = null;
-            }
-          }
-        }
-      },
-      { threshold: 0.6 }
-    );
-    return () => obsRef.current?.disconnect();
-  }, []);
-
-  // Expose observer to cards via callback
-  const handleVideoRef = useCallback((id: string, el: HTMLVideoElement | null) => {
-    if (el) {
-      videoMapRef.current.set(id, el);
-      obsRef.current?.observe(el);
-    } else {
-      const prev = videoMapRef.current.get(id);
-      if (prev) {
-        obsRef.current?.unobserve(prev);
-        videoMapRef.current.delete(id);
-      }
-    }
-  }, []);
+  // Playback is now driven per-card by hover (and by an in-view observer on
+  // touch devices, where hover does not exist). The shared observer that used
+  // to dispatch reel:play / reel:pause events is gone with it.
 
   if (!reels || reels.length === 0) return null;
 
@@ -399,12 +308,7 @@ export default function InstagramReels({ reels, sectionTitle }: Props) {
           }}
         >
           {reels.map((reel, i) => (
-            <ReelCard
-              key={reel.id}
-              reel={reel}
-              index={i}
-              onVideoRef={handleVideoRef}
-            />
+            <ReelCard key={reel.id} reel={reel} index={i} />
           ))}
         </Box>
       </Container>
