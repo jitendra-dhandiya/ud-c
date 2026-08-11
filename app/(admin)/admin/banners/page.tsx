@@ -34,6 +34,10 @@ export default function BannersPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  // Optional portrait crop for phones — the desktop hero is ~2.5:1 and gets
+  // cut to a sliver on a narrow screen without one.
+  const [mobileFile, setMobileFile] = useState<File | null>(null);
+  const [mobilePreview, setMobilePreview] = useState<string>('');
 
   const fetchBanners = useCallback(() => {
     setLoading(true);
@@ -60,6 +64,7 @@ export default function BannersPage() {
         const fd = new FormData();
         Object.entries(values).forEach(([k, v]) => fd.append(k, String(v)));
         if (imageFile) fd.append('image', imageFile);
+        if (mobileFile) fd.append('mobileImage', mobileFile);
         if (editBanner) {
           await bannerApi.update(editBanner.id, fd);
           toast.success('Banner updated');
@@ -84,6 +89,7 @@ export default function BannersPage() {
 
   const openEdit = (banner: any) => {
     setEditBanner(banner); setImagePreview(banner.image || banner.imageUrl || ''); setImageFile(null);
+    setMobilePreview((banner as any).mobileImage || ''); setMobileFile(null);
     formik.setValues({
       title: banner.title || '', subtitle: banner.subtitle || '', type: banner.type || 'HERO',
       gender: banner.gender || 'ALL',
@@ -221,7 +227,7 @@ export default function BannersPage() {
                     Recommended resolution: <strong>1440 × 560 px</strong> &nbsp;|&nbsp; Max file size: <strong>1 MB</strong>
                   </Typography>
                   <Typography variant="caption" sx={{ color: '#8a6a00', display: 'block', mt: 0.25 }}>
-                    Images will be automatically resized &amp; optimised to 1440 × 560 px on upload.
+                    Upload at 2560px wide or more. The original is kept at full quality; visitors are served a viewport-sized AVIF.
                   </Typography>
                 </Box>
               )}
@@ -234,14 +240,38 @@ export default function BannersPage() {
                 <input type="file" hidden accept="image/jpeg,image/jpg,image/png,image/webp" onChange={e => {
                   const f = e.target.files?.[0];
                   if (!f) return;
-                  if (f.size > 1 * 1024 * 1024) {
-                    toast.error('Image must be 1 MB or smaller');
+                  if (f.size > 25 * 1024 * 1024) {
+                    toast.error('Image must be 25 MB or smaller');
                     e.target.value = '';
                     return;
                   }
                   setImageFile(f); setImagePreview(URL.createObjectURL(f));
                 }} />
               </Button>
+
+              {/* Optional portrait crop for phones */}
+              <Box sx={{ mt: 2 }}>
+                {mobilePreview && (
+                  <Box component="img" src={mobilePreview} alt="mobile preview"
+                    sx={{ width: 110, height: 160, objectFit: 'cover', borderRadius: 1, mb: 1, display: 'block' }} />
+                )}
+                <Button variant="outlined" component="label" size="small">
+                  {mobilePreview ? 'Change Mobile Image' : 'Upload Mobile Image (optional)'}
+                  <input type="file" hidden accept="image/jpeg,image/jpg,image/png,image/webp" onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    if (f.size > 25 * 1024 * 1024) {
+                      toast.error('Image must be 25 MB or smaller');
+                      e.target.value = '';
+                      return;
+                    }
+                    setMobileFile(f); setMobilePreview(URL.createObjectURL(f));
+                  }} />
+                </Button>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
+                  Portrait crop shown on screens under 768px. Without it the wide desktop image is cropped hard on phones.
+                </Typography>
+              </Box>
               <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
                 Accepted: JPG, PNG, WebP &nbsp;·&nbsp; Max: 1 MB
               </Typography>

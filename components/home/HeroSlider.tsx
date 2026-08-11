@@ -1,7 +1,7 @@
 'use client';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Navigation, Pagination, EffectFade } from 'swiper/modules';
-import Image from 'next/image';
+import { buildImageUrl, buildSrcSet, MOBILE_WIDTHS } from '../../lib/imageUrl';
 import Link from 'next/link';
 import { Box, Typography, Button, Container } from '@mui/material';
 import { motion } from 'framer-motion';
@@ -112,14 +112,44 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
         {banners.map((banner, idx) => (
           <SwiperSlide key={banner.id}>
             <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-              <Image
-                src={banner.image}
-                alt={banner.title}
-                fill
-                style={{ objectFit: 'cover', objectPosition: 'center center' }}
-                priority={idx === 0}
-                sizes="100vw"
-              />
+              {/**
+                * Native <picture> rather than next/image, because next/image
+                * cannot art-direct: it rescales one file, it cannot swap the
+                * file at a breakpoint. A hero is ~2.5:1, so on a phone the
+                * desktop crop is either a letterboxed sliver or loses the
+                * subject. When a portrait crop has been uploaded the browser
+                * takes that instead — and downloads only the matching source,
+                * never both.
+                *
+                * The srcsets still come from the derivative pipeline, so each
+                * breakpoint gets a viewport-sized AVIF/WebP.
+                */}
+              <picture>
+                {banner.mobileImage && (
+                  <source
+                    media="(max-width: 768px)"
+                    srcSet={buildSrcSet(banner.mobileImage, MOBILE_WIDTHS)}
+                    sizes="100vw"
+                  />
+                )}
+                <img
+                  src={buildImageUrl(banner.image, 1920)}
+                  srcSet={buildSrcSet(banner.image)}
+                  sizes="100vw"
+                  alt={banner.title}
+                  // The first slide is the LCP element on the homepage: load it
+                  // eagerly and tell the browser it outranks everything else.
+                  // Later slides are off-screen and must not compete with it.
+                  loading={idx === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={idx === 0 ? 'high' : 'low'}
+                  decoding={idx === 0 ? 'sync' : 'async'}
+                  style={{
+                    position: 'absolute', inset: 0,
+                    width: '100%', height: '100%',
+                    objectFit: 'cover', objectPosition: 'center center',
+                  }}
+                />
+              </picture>
               {/* Multi-stop gradient for better text legibility */}
               <Box sx={{
                 position: 'absolute', inset: 0,
