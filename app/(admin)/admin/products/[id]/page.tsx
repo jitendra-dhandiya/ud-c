@@ -654,11 +654,14 @@ export default function EditProductPage() {
               <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: 'text.secondary' }}>
                 Color Hex
               </Typography>
-              <input
-                type="color"
-                value={variantForm.colorHex}
-                onChange={e => setVariantForm(prev => ({ ...prev, colorHex: e.target.value }))}
-                style={{ width: '100%', height: 38, border: '1px solid #ccc', borderRadius: 4, cursor: 'pointer', padding: 2 }}
+              <TextField
+                label="Colour Name"
+                size="small"
+                fullWidth
+                placeholder="e.g. Black, Off White, Sage Green"
+                helperText="The swatch colour is derived from this name."
+                value={variantForm.color}
+                onChange={e => setVariantForm(prev => ({ ...prev, color: e.target.value }))}
               />
             </Grid>
             <Grid item xs={6}>

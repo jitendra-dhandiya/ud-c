@@ -153,32 +153,19 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
               {/* Multi-stop gradient for better text legibility */}
               <Box sx={{
                 position: 'absolute', inset: 0,
-                background: 'linear-gradient(to right, rgba(0,0,0,0.68) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.05) 100%)',
+                // Lighter than before: it existed to make the headline legible, and with
+                // the headline gone a heavy scrim only dulls the image. Enough
+                // remains to keep the CTA readable on a bright banner.
+                background: 'linear-gradient(to right, rgba(0,0,0,0.34) 0%, rgba(0,0,0,0.12) 45%, rgba(0,0,0,0) 100%)',
               }} />
 
               <Container maxWidth="xl" sx={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center' }}>
                 <Box sx={{ color: 'white', maxWidth: { xs: '85%', md: 560 } }}>
                   <motion.div initial={{ opacity: 0, x: -32 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.75 }}>
-                    {banner.subtitle && (
-                      <Typography variant="overline" sx={{
-                        color: '#c9a84c', letterSpacing: '0.28em',
-                        display: 'block', mb: 1.5,
-                        fontSize: { xs: '0.62rem', md: '0.72rem' }, fontWeight: 700,
-                      }}>
-                        {banner.subtitle}
-                      </Typography>
-                    )}
-                    <Typography
-                      variant="h2"
-                      sx={{
-                        fontFamily: 'var(--font-playfair)', color: 'white',
-                        fontSize: { xs: '1.8rem', sm: '2.6rem', md: '3.8rem' },
-                        lineHeight: 1.1, mb: { xs: 2, md: 3 }, fontWeight: 700,
-                        textShadow: '0 2px 20px rgba(0,0,0,0.3)',
-                      }}
-                    >
-                      {banner.title}
-                    </Typography>
+                    {/* Title and subtitle intentionally not rendered — the
+                        artwork carries the message. Both fields remain on the
+                        model: title is the image alt text and identifies the
+                        banner in admin. */}
                     {banner.ctaText && banner.link && (
                       <Button
                         component={Link} href={banner.link}

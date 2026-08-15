@@ -37,8 +37,30 @@ export default function ProductDetailClient({ product }: Props) {
   const displayPrice = product.salePrice || product.basePrice;
   const discount = product.salePrice ? getDiscountPercent(product.basePrice, product.salePrice) : 0;
 
-  const uniqueSizes = [...new Set(product.variants?.map((v) => v.size).filter(Boolean))];
-  const uniqueColors = [...new Set(product.variants?.map((v) => v.color).filter(Boolean))];
+  /**
+   * Only sizes a customer can actually buy.
+   *
+   * These used to be listed and greyed out, which advertises stock that does
+   * not exist and invites a click that cannot succeed. A size with no stock in
+   * any colour is now simply absent. Note the check is across ALL variants of
+   * that size — XL might be sold out in Black but in stock in White, and that
+   * still counts as available.
+   */
+  const uniqueSizes = [
+    ...new Set(
+      product.variants
+        ?.filter((v) => v.size && (v.stockQuantity ?? 0) > 0)
+        .map((v) => v.size) ?? []
+    ),
+  ];
+
+  const uniqueColors = [
+    ...new Set(
+      product.variants
+        ?.filter((v) => v.color && (v.stockQuantity ?? 0) > 0)
+        .map((v) => v.color) ?? []
+    ),
+  ];
 
   const handleSizeSelect = (size: string) => {
     setSelectedSize(size);
@@ -236,8 +258,13 @@ export default function ProductDetailClient({ product }: Props) {
                   </Box>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     {uniqueSizes.map((size) => {
-                      const variant = product.variants?.find((v) => v.size === size);
-                      const outOfStock = variant?.stockQuantity === 0;
+                      // Every size reaching here has stock in at least one
+                      // colour; this narrows to the currently selected colour so
+                      // a size unavailable in THAT colour still reads as such.
+                      const variant = product.variants?.find(
+                        (v) => v.size === size && (selectedColor ? v.color === selectedColor : true)
+                      );
+                      const outOfStock = (variant?.stockQuantity ?? 0) === 0;
                       return (
                         <Box
                           key={size}

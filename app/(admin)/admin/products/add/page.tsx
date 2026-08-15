@@ -12,7 +12,15 @@ import { productApi, categoryApi } from '../../../../../services/api.service';
 import { GENDERS } from '../../../../../constants';
 import { toast } from 'react-hot-toast';
 
-const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+/**
+ * Offered as quick-add chips only. Sizes are free text — a catalogue carries
+ * waist sizes (26-36), 'Free Size', UK numbers — so a fixed list cannot cover
+ * it and must not be the only way in.
+ */
+const SIZE_SUGGESTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Free Size'];
+
+/** New size rows start at 1, not 10 — real stock is entered per size. */
+const DEFAULT_SIZE_STOCK = 1;
 
 const schema = Yup.object({
   name: Yup.string().required('Product name required'),
@@ -51,7 +59,8 @@ export default function AddProductPage() {
       standardShippingCharge: '' as string | number,
       codShippingCharge: '' as string | number,
       expressShippingCharge: '' as string | number,
-      variants: [{ color: '', colorHex: '#000000', sizes: SIZES.map(s => ({ size: s, stock: 10, price: '' })) }],
+      // Starts empty: the admin adds only the sizes this product actually has.
+      variants: [{ color: '', colorHex: '', sizes: [] as { size: string; stock: number; price: string }[] }],
     },
     validationSchema: schema,
     onSubmit: async (values, { setSubmitting }) => {
@@ -256,8 +265,8 @@ export default function AddProductPage() {
                     <Typography variant="subtitle2" fontWeight={700}>Variants (Colors & Sizes)</Typography>
                     <Button size="small" startIcon={<Add />} onClick={() => {
                       formik.setFieldValue('variants', [...formik.values.variants, {
-                        color: '', colorHex: '#000000',
-                        sizes: SIZES.map(s => ({ size: s, stock: 10, price: '' })),
+                        color: '', colorHex: '',
+                        sizes: [] as { size: string; stock: number; price: string }[],
                       }]);
                     }}>
                       Add Color
@@ -267,15 +276,14 @@ export default function AddProductPage() {
                   {formik.values.variants.map((variant, vi) => (
                     <Box key={vi} sx={{ mb: 3, p: 2, bgcolor: '#fafafa', borderRadius: 1 }}>
                       <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
-                        <TextField label="Color Name" size="small" sx={{ flex: 1 }}
+                        {/* Colour is a NAME, not a spectrum pick. Nobody
+                            merchandises "#8B4513" — they merchandise "Tan", and
+                            that is also what the customer reads. The swatch hex
+                            is derived from the name on the server. */}
+                        <TextField label="Colour Name" size="small" sx={{ flex: 1 }}
+                          placeholder="e.g. Black, Off White, Sage Green"
                           value={variant.color}
                           onChange={e => formik.setFieldValue(`variants.${vi}.color`, e.target.value)} />
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="caption">Hex:</Typography>
-                          <input type="color" value={variant.colorHex}
-                            onChange={e => formik.setFieldValue(`variants.${vi}.colorHex`, e.target.value)}
-                            style={{ width: 40, height: 32, border: 'none', cursor: 'pointer', borderRadius: 4 }} />
-                        </Box>
                         {formik.values.variants.length > 1 && (
                           <IconButton size="small" color="error" onClick={() =>
                             formik.setFieldValue('variants', formik.values.variants.filter((_, i) => i !== vi))}>
@@ -284,21 +292,79 @@ export default function AddProductPage() {
                         )}
                       </Box>
 
-                      <Grid container spacing={1.5}>
-                        {variant.sizes.map((sv, si) => (
-                          <Grid item xs={4} sm={2} key={sv.size}>
-                            <Typography variant="caption" fontWeight={700} display="block" sx={{ mb: 0.5 }}>
-                              {sv.size}
-                            </Typography>
-                            <TextField
-                              label="Stock" type="number" size="small" fullWidth
-                              value={sv.stock}
-                              onChange={e => formik.setFieldValue(`variants.${vi}.sizes.${si}.stock`, Number(e.target.value))}
-                              inputProps={{ min: 0 }}
-                            />
-                          </Grid>
+                      {/* Sizes are free text and added one at a time.
+                          A fixed XS-XXL grid cannot express a denim catalogue
+                          (waist 26-36), "Free Size", or UK numbering, and it
+                          forced every product to carry six rows whether or not
+                          those sizes existed. */}
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
+                        {SIZE_SUGGESTIONS.filter(sz => !variant.sizes.some(x => x.size === sz)).map(sz => (
+                          <Chip
+                            key={sz}
+                            label={`+ ${sz}`}
+                            size="small"
+                            variant="outlined"
+                            onClick={() => formik.setFieldValue(`variants.${vi}.sizes`, [
+                              ...variant.sizes, { size: sz, stock: DEFAULT_SIZE_STOCK, price: '' },
+                            ])}
+                          />
                         ))}
-                      </Grid>
+                        <TextField
+                          size="small"
+                          placeholder="Custom size + Enter"
+                          sx={{ width: 170 }}
+                          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                            if (e.key !== 'Enter') return;
+                            e.preventDefault();
+                            const el = e.target as HTMLInputElement;
+                            const value = el.value.trim();
+                            if (!value) return;
+                            if (variant.sizes.some(x => x.size.toLowerCase() === value.toLowerCase())) {
+                              toast.error(`"${value}" is already added`);
+                              return;
+                            }
+                            formik.setFieldValue(`variants.${vi}.sizes`, [
+                              ...variant.sizes, { size: value, stock: DEFAULT_SIZE_STOCK, price: '' },
+                            ]);
+                            el.value = '';
+                          }}
+                        />
+                      </Box>
+
+                      {variant.sizes.length === 0 ? (
+                        <Typography variant="caption" color="text.secondary">
+                          No sizes yet — add the ones this colour actually comes in.
+                        </Typography>
+                      ) : (
+                        <Grid container spacing={1.5}>
+                          {variant.sizes.map((sv, si) => (
+                            <Grid item xs={6} sm={3} md={2} key={`${sv.size}-${si}`}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                                <Typography variant="caption" fontWeight={700} noWrap sx={{ flex: 1 }}>
+                                  {sv.size}
+                                </Typography>
+                                <IconButton
+                                  size="small"
+                                  sx={{ p: 0.2, color: '#d32f2f' }}
+                                  onClick={() => formik.setFieldValue(
+                                    `variants.${vi}.sizes`,
+                                    variant.sizes.filter((_, i) => i !== si)
+                                  )}
+                                >
+                                  <Remove sx={{ fontSize: 14 }} />
+                                </IconButton>
+                              </Box>
+                              <TextField
+                                label="Stock" type="number" size="small" fullWidth
+                                value={sv.stock}
+                                onChange={e => formik.setFieldValue(`variants.${vi}.sizes.${si}.stock`, Number(e.target.value))}
+                                inputProps={{ min: 0 }}
+                                helperText={Number(sv.stock) === 0 ? 'Hidden from customers' : undefined}
+                              />
+                            </Grid>
+                          ))}
+                        </Grid>
+                      )}
                     </Box>
                   ))}
                 </CardContent>
