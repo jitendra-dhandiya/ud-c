@@ -19,8 +19,14 @@ import { toast } from 'react-hot-toast';
  */
 const SIZE_SUGGESTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Free Size'];
 
-/** New size rows start at 1, not 10 — real stock is entered per size. */
-const DEFAULT_SIZE_STOCK = 1;
+/**
+ * Stock a newly added size row starts at.
+ *
+ * Was 10, which was a placeholder that quietly became real inventory whenever
+ * an admin did not overwrite it. 2 matches the figure the catalogue is
+ * currently stocked at, so a new size lines up with everything else by default.
+ */
+const DEFAULT_SIZE_STOCK = 2;
 
 const schema = Yup.object({
   name: Yup.string().required('Product name required'),

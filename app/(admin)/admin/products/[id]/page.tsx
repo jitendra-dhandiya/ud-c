@@ -22,7 +22,11 @@ const schema = Yup.object({
   categoryId: Yup.string().required('Category required'),
 });
 
-const emptyVariantForm = () => ({ color: '', colorHex: '#000000', size: '', stockQuantity: 0, price: '', isActive: true });
+/** Matches the add-product default. A new variant at 0 would be created
+  * already hidden from customers, since zero-stock sizes are not listed. */
+const DEFAULT_VARIANT_STOCK = 2;
+
+const emptyVariantForm = () => ({ color: '', colorHex: '', size: '', stockQuantity: DEFAULT_VARIANT_STOCK, price: '', isActive: true });
 
 export default function EditProductPage() {
   const router = useRouter();
