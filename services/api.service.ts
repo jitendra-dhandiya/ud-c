@@ -214,11 +214,21 @@ export const blogApi = {
 };
 
 // ─── Instagram Reels ──────────────────────────────────────────
+
+/**
+ * A reel upload sends tens of megabytes, and the global 30s client timeout is
+ * sized for JSON calls. On a slow uplink a 50 MB video does not finish
+ * transferring inside that window, and the browser cancels a request the server
+ * is still reading — which is exactly how uploads were failing at 29.8s.
+ */
+const UPLOAD_TIMEOUT_MS = 10 * 60 * 1000;
+
 export const instagramReelsApi = {
   getActive: () => api.get('/instagram-reels'),
   getAll: () => api.get('/instagram-reels/admin'),
-  create: (data: object) => api.post('/instagram-reels', data),
-  update: (id: string, data: object) => api.put(`/instagram-reels/${id}`, data),
+  create: (data: object) => api.post('/instagram-reels', data, { timeout: UPLOAD_TIMEOUT_MS }),
+  update: (id: string, data: object) =>
+    api.put(`/instagram-reels/${id}`, data, { timeout: UPLOAD_TIMEOUT_MS }),
   delete: (id: string) => api.delete(`/instagram-reels/${id}`),
   reorder: (order: { id: string; sortOrder: number }[]) => api.patch('/instagram-reels/reorder', { order }),
 };

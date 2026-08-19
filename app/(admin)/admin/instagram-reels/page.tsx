@@ -5,7 +5,7 @@ import {
   TableHead, TableRow, IconButton, Chip, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Switch, FormControlLabel,
   Alert, Snackbar, Tooltip, Avatar, Stack, CircularProgress,
-  Grid, InputAdornment,
+  Grid, InputAdornment, LinearProgress,
 } from '@mui/material';
 import {
   Add, Edit, Delete, DragIndicator, Instagram, OpenInNew,
@@ -39,6 +39,9 @@ export default function InstagramReelsAdminPage() {
   const [reels, setReels] = useState<Reel[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Without this a multi-megabyte upload showed only a spinner, so there was no
+  // way to tell a slow upload from a hung one.
+  const [uploadPct, setUploadPct] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editReel, setEditReel] = useState<Partial<Reel>>(EMPTY);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -85,6 +88,7 @@ export default function InstagramReelsAdminPage() {
       return;
     }
     setSaving(true);
+    setUploadPct(0);
     try {
       // Multipart only when a file is attached; otherwise keep the plain JSON
       // path so nothing about the existing URL-only flow changes.
@@ -104,7 +108,18 @@ export default function InstagramReelsAdminPage() {
         if (videoFile) fd.append('video', videoFile);
         if (thumbFile) fd.append('thumbnail', thumbFile);
         payload = fd;
-        config = { headers: { 'Content-Type': 'multipart/form-data' } };
+        config = {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          // The shared client times out at 30s, which is sized for JSON. A
+          // 50 MB video does not finish transferring in that window on a normal
+          // uplink, so the browser cancelled a request the server was still
+          // reading — uploads were dying at 29.8s with nothing saved.
+          timeout: 10 * 60 * 1000,
+          onUploadProgress: (e: any) => {
+            if (!e.total) return;
+            setUploadPct(Math.round((e.loaded / e.total) * 100));
+          },
+        };
       }
 
       if (editingId) {
@@ -122,6 +137,7 @@ export default function InstagramReelsAdminPage() {
       setSnack({ msg: e?.response?.data?.message || 'Failed to save reel', sev: 'error' });
     } finally {
       setSaving(false);
+      setUploadPct(0);
     }
   };
 
@@ -512,8 +528,23 @@ export default function InstagramReelsAdminPage() {
           )}
         </DialogContent>
 
+        {saving && videoFile && (
+          <Box sx={{ px: 3, pb: 1 }}>
+            <LinearProgress
+              variant={uploadPct > 0 && uploadPct < 100 ? 'determinate' : 'indeterminate'}
+              value={uploadPct}
+              sx={{ height: 6, borderRadius: 3 }}
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+              {uploadPct < 100
+                ? `Uploading ${uploadPct}% of ${(videoFile.size / 1048576).toFixed(1)} MB…`
+                : 'Upload complete — saving. The video is optimised in the background, so this finishes right away.'}
+            </Typography>
+          </Box>
+        )}
+
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-          <Button onClick={() => setDialogOpen(false)} variant="outlined" sx={{ borderColor: '#ddd', color: '#555' }}>
+          <Button onClick={() => setDialogOpen(false)} variant="outlined" disabled={saving} sx={{ borderColor: '#ddd', color: '#555' }}>
             Cancel
           </Button>
           <Button
@@ -522,7 +553,9 @@ export default function InstagramReelsAdminPage() {
             disabled={saving}
             sx={{ bgcolor: '#1a1a1a', '&:hover': { bgcolor: '#333' }, fontWeight: 700, minWidth: 100 }}
           >
-            {saving ? <CircularProgress size={18} sx={{ color: 'white' }} /> : editingId ? 'Save Changes' : 'Add Reel'}
+            {saving
+              ? <CircularProgress size={18} sx={{ color: 'white' }} />
+              : editingId ? 'Save Changes' : 'Add Reel'}
           </Button>
         </DialogActions>
       </Dialog>
