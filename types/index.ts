@@ -94,6 +94,8 @@ export interface Product {
   totalReviews: number;
   avgRating: number;
   totalSold: number;
+  /** Display priority: higher shows first, 0 is the neutral default. */
+  sortOrder?: number;
   videoUrl?: string;
   metaTitle?: string;
   metaDesc?: string;

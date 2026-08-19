@@ -30,6 +30,10 @@ export default function AdminProductsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft'>('all');
+  // Priority edits are staged rather than saved per keystroke, so renumbering a
+  // page of products is one request instead of one per digit typed.
+  const [priorityEdits, setPriorityEdits] = useState<Record<string, number>>({});
+  const [savingPriority, setSavingPriority] = useState(false);
   const limit = 20;
 
   useEffect(() => {
@@ -50,6 +54,7 @@ export default function AdminProductsPage() {
       });
       setProducts(data.data || []);
       setTotal(data.meta?.total || 0);
+      setPriorityEdits({});
     } catch {
       setProducts([]);
     } finally {
@@ -60,6 +65,29 @@ export default function AdminProductsPage() {
   useEffect(() => { fetchProducts(); }, [page, debouncedSearch, statusFilter]);
   // Any filter change invalidates the current page number.
   useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter]);
+
+  const dirtyPriorities = Object.entries(priorityEdits).filter(([id, value]) => {
+    const current = products.find(p => p.id === id)?.sortOrder ?? 0;
+    return value !== current;
+  });
+
+  const handleSavePriorities = async () => {
+    if (!dirtyPriorities.length) return;
+    setSavingPriority(true);
+    try {
+      await productApi.updatePositions(
+        dirtyPriorities.map(([id, sortOrder]) => ({ id, sortOrder }))
+      );
+      toast.success(`Order updated for ${dirtyPriorities.length} product${dirtyPriorities.length > 1 ? 's' : ''}`);
+      // Refetch rather than patch in place: the new priorities change which
+      // products belong on this page of the sorted list.
+      fetchProducts();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to update order');
+    } finally {
+      setSavingPriority(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -87,6 +115,36 @@ export default function AdminProductsPage() {
           sx={{ width: 44, height: 59, bgcolor: '#f5f5f5' }}
         />
       ),
+    }),
+    columnHelper.display({
+      id: 'priority',
+      header: 'Priority',
+      cell: ({ row }) => {
+        const id = row.original.id;
+        const value = priorityEdits[id] ?? row.original.sortOrder ?? 0;
+        const changed = value !== (row.original.sortOrder ?? 0);
+        return (
+          <TextField
+            type="number"
+            size="small"
+            value={value}
+            onChange={(e) => {
+              const n = e.target.value === '' ? 0 : Math.trunc(Number(e.target.value));
+              if (Number.isNaN(n)) return;
+              setPriorityEdits((prev) => ({ ...prev, [id]: n }));
+            }}
+            // The row is a link target in places; keep clicks on the input local.
+            onClick={(e) => e.stopPropagation()}
+            inputProps={{ style: { padding: '6px 8px', width: 52, textAlign: 'center', fontWeight: 700 } }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                bgcolor: changed ? '#fff8e1' : 'transparent',
+                '& fieldset': { borderColor: changed ? '#c9a84c' : 'rgba(0,0,0,0.15)' },
+              },
+            }}
+          />
+        );
+      },
     }),
     columnHelper.accessor('name', {
       header: 'Product',
@@ -179,7 +237,7 @@ export default function AdminProductsPage() {
         </Box>
       ),
     }),
-  ], []);
+  ], [priorityEdits]);
 
   const table = useReactTable({
     data: products,
@@ -192,10 +250,25 @@ export default function AdminProductsPage() {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5" sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 700 }}>
-          Products ({total})
-        </Typography>
+        <Box>
+          <Typography variant="h5" sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 700 }}>
+            Products ({total})
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Priority orders every storefront section — higher shows first, 0 is the default.
+          </Typography>
+        </Box>
         <Stack direction="row" spacing={1.5}>
+          {dirtyPriorities.length > 0 && (
+            <Button
+              onClick={handleSavePriorities}
+              disabled={savingPriority}
+              variant="contained"
+              sx={{ bgcolor: '#c9a84c', color: '#111', fontWeight: 700, '&:hover': { bgcolor: '#a8872a' } }}
+            >
+              {savingPriority ? 'Saving…' : `Save order (${dirtyPriorities.length})`}
+            </Button>
+          )}
           <Button startIcon={<Refresh />} onClick={fetchProducts} variant="outlined" sx={{ borderColor: '#e0e0e0' }}>
             Refresh
           </Button>

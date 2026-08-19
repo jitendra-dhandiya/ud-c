@@ -90,6 +90,7 @@ export default function EditProductPage() {
       stockQuantity: product?.stockQuantity ?? 0,
       isActive: product?.isActive ?? true,
       isFeatured: product?.isFeatured ?? false,
+      sortOrder: product?.sortOrder ?? 0,
       isTrending: product?.isTrending ?? false,
       isNewArrival: product?.isNewArrival ?? true,
       isBestSeller: product?.isBestSeller ?? false,
@@ -117,6 +118,7 @@ export default function EditProductPage() {
         fd.append('stockQuantity', String(values.stockQuantity));
         fd.append('gender', values.gender);
         fd.append('isActive', String(values.isActive));
+        fd.append('sortOrder', String(values.sortOrder === '' ? 0 : values.sortOrder));
         fd.append('isFeatured', String(values.isFeatured));
         fd.append('isTrending', String(values.isTrending));
         fd.append('isNewArrival', String(values.isNewArrival));
@@ -582,6 +584,15 @@ export default function EditProductPage() {
                       sx={{ display: 'flex', mb: 0.5 }}
                     />
                   ))}
+                  <TextField
+                    label="Display Priority"
+                    type="number"
+                    size="small"
+                    fullWidth
+                    sx={{ mt: 2 }}
+                    {...formik.getFieldProps('sortOrder')}
+                    helperText="Higher shows first across every section. 0 is the default; use a negative number to push a product down."
+                  />
                 </CardContent>
               </Card>
 

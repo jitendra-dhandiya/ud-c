@@ -60,6 +60,9 @@ export default function AddProductPage() {
       // Blank means "derive from the variant stock below".
       stockQuantity: '' as string | number,
       isFeatured: false, isTrending: false, isNewArrival: true, isBestSeller: false,
+      // Display priority: higher shows first. 0 keeps a new product in its
+      // natural place rather than jumping it to the top of every section.
+      sortOrder: 0 as string | number,
       material: '', careInstructions: '', fit: '', style: '',
       metaTitle: '', metaDescription: '',
       tags: [] as string[],
@@ -93,6 +96,7 @@ export default function AddProductPage() {
         fd.append('categoryId', values.categoryId);
         if (values.collectionId) fd.append('collectionId', values.collectionId);
         fd.append('gender', values.gender);
+        fd.append('sortOrder', String(values.sortOrder === '' ? 0 : values.sortOrder));
         fd.append('isFeatured', String(values.isFeatured));
         fd.append('isTrending', String(values.isTrending));
         fd.append('isNewArrival', String(values.isNewArrival));
@@ -440,6 +444,15 @@ export default function AddProductPage() {
                       sx={{ display: 'flex', mb: 0.5 }}
                     />
                   ))}
+                  <TextField
+                    label="Display Priority"
+                    type="number"
+                    size="small"
+                    fullWidth
+                    sx={{ mt: 2 }}
+                    {...formik.getFieldProps('sortOrder')}
+                    helperText="Higher shows first across every section. 0 is the default; use a negative number to push a product down."
+                  />
                 </CardContent>
               </Card>
 

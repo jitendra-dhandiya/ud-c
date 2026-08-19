@@ -15,6 +15,10 @@ export const PRODUCT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Free Si
 export const PRODUCT_COLORS = ['Black', 'White', 'Navy', 'Grey', 'Beige', 'Brown', 'Green', 'Blue', 'Red', 'Pink', 'Yellow', 'Orange', 'Purple'];
 
 export const SORT_OPTIONS = [
+  // Curated order: the admin's per-product display priority, highest first,
+  // falling back to newest among products of equal priority. Default so that
+  // setting a priority in admin actually changes what shoppers see.
+  { value: 'featured', label: 'Featured' },
   { value: 'newest', label: 'Newest First' },
   { value: 'popular', label: 'Most Popular' },
   { value: 'rating', label: 'Highest Rated' },
