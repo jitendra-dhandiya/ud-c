@@ -83,8 +83,14 @@ export default function CategoryShowcase({ initialCategories = [] }: Props) {
               <Link href={`/category/${cat.slug}`} style={{ textDecoration: 'none', display: 'block' }}>
                 <Box
                   sx={{
+                    // Category photography is portrait (sources run 0.56–0.80).
+                    // A 4/5 box on a ~173px-wide phone column had to crop those
+                    // vertically to fill it, and since the crop is centred it
+                    // took the model's head off — "Pants and Trousers" kept only
+                    // 71% of its height. A taller box on mobile, where the
+                    // column is narrowest, cuts far less.
+                    aspectRatio: { xs: '3 / 4', md: '4 / 5' },
                     position: 'relative',
-                    aspectRatio: '4 / 5',
                     overflow: 'hidden',
                     cursor: 'pointer',
                     borderRadius: { xs: '10px', md: '14px' },
@@ -100,7 +106,15 @@ export default function CategoryShowcase({ initialCategories = [] }: Props) {
                       alt={cat.name}
                       fill
                       className="cat-img"
-                      style={{ objectFit: 'cover', transition: 'transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94)' }}
+                      style={{
+                        objectFit: 'cover',
+                        // Bias the crop upward: in a full-length fashion shot the
+                        // face sits near the top, so a centred crop is exactly the
+                        // one that removes it. Whatever has to go comes off the
+                        // feet instead.
+                        objectPosition: 'center 30%',
+                        transition: 'transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                      }}
                       sizes="(max-width: 600px) 50vw, 25vw"
                     />
                   )}
@@ -140,12 +154,18 @@ export default function CategoryShowcase({ initialCategories = [] }: Props) {
                     <Typography sx={{
                       color: '#FFE500',
                       fontWeight: 900,
-                      fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' },
+                      fontSize: { xs: '0.95rem', sm: '1.2rem', md: '1.5rem' },
                       textTransform: 'uppercase',
-                      lineHeight: 1.1,
+                      lineHeight: 1.15,
                       letterSpacing: '-0.01em',
-                      mb: { xs: 1.5, md: 2 },
+                      mb: { xs: 1.25, md: 2 },
                       textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+                      maxWidth: '100%',
+                      // The card clips its overflow, so a long single word
+                      // ("SWEATSHIRTS") would otherwise be sliced at the edge
+                      // rather than wrapped.
+                      overflowWrap: 'anywhere',
+                      hyphens: 'auto',
                     }}>
                       {cat.name}
                     </Typography>
