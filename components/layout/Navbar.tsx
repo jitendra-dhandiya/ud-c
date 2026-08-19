@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppSelector, useAppDispatch } from '../../store';
 import { toggleCart } from '../../store/slices/cartSlice';
 import { setGender, type GenderType } from '../../store/slices/genderSlice';
+import { persistGender } from '../../lib/genderPreference';
 import { openLoginModal } from '../../store/slices/uiSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { productApi } from '../../services/api.service';
@@ -77,7 +78,9 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
   const handleGenderChange = (g: GenderType) => {
     if (gender === g) return;
     dispatch(setGender(g));
-    localStorage.setItem('ud_gender', g);
+    // Cookie, not just localStorage: the next server render reads this to pick
+    // which gender's catalogue to send.
+    persistGender(g);
   };
 
   const [mobileOpen, setMobileOpen] = useState(false);

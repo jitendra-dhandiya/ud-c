@@ -13,6 +13,7 @@ import StoreLocations from './StoreLocations';
 import MarqueeStrip from './MarqueeStrip';
 import InstagramReels from './InstagramReels';
 import { productApi, bannerApi } from '../../services/api.service';
+import type { GenderType } from '../../lib/genderPreference';
 
 // ── Promo strip ────────────────────────────────────────────────
 function PromoStrip() {
@@ -57,6 +58,8 @@ interface ProductData {
 
 interface Props {
   sections: any[];
+  /** Gender the server rendered `initialData` for, from the preference cookie. */
+  initialGender: GenderType;
   initialData: {
     heroBanners: any[];
     promoBanners: any[];
@@ -72,13 +75,18 @@ interface Props {
 }
 
 // ── Main component ─────────────────────────────────────────────
-export default function GenderHomePage({ sections, initialData }: Props) {
+export default function GenderHomePage({ sections, initialGender, initialData }: Props) {
   const gender = useAppSelector((s) => s.gender.selected);
+  const genderReady = useAppSelector((s) => s.gender.initialized);
 
-  // Prevent SSR/client mismatch: server always renders WOMEN; client updates after mount
+  // The Redux store is a module singleton, so it cannot be seeded per SSR
+  // request — on the server it always starts at the WOMEN default. Stay on the
+  // gender the server actually rendered until the stored preference has been
+  // applied, otherwise a MEN shopper flashes the WOMEN default for a render and
+  // triggers a needless refetch.
   const [hasMounted, setHasMounted] = useState(false);
   useEffect(() => { setHasMounted(true); }, []);
-  const displayGender = hasMounted ? gender : 'WOMEN';
+  const displayGender = hasMounted && genderReady ? gender : initialGender;
 
   // Strict gender filter for homepage sections:
   // UNISEX → always visible; null/Unset → never visible; WOMEN/MEN → only when that gender is active
@@ -100,34 +108,42 @@ export default function GenderHomePage({ sections, initialData }: Props) {
   const [promoBanners, setPromoBanners] = useState<any[]>(initialData.promoBanners);
   const [fetching, setFetching] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  // Skip the first effect run after mount — SSR already provided that data
-  const skipNextFetch = useRef(true);
+  /**
+   * Which gender the data currently in state belongs to.
+   *
+   * This used to be a one-shot "skip the first run after mount" boolean, which
+   * could not tell apart the two things that happen on that first run: the SSR
+   * data already matching the active gender (skipping is right) and the stored
+   * preference restoring a *different* gender (skipping drops the refetch). The
+   * second case is why refreshing as MEN left the toggle on MEN while the
+   * products stayed as the server had sent them.
+   */
+  const loadedGender = useRef<GenderType>(initialGender);
 
   useEffect(() => {
-    // hasMounted flips to true on mount, which triggers this effect.
-    // Skip that first run; only refetch when the user actually changes gender.
-    if (!hasMounted) return;
-    if (skipNextFetch.current) {
-      skipNextFetch.current = false;
-      return;
-    }
+    if (!hasMounted || !genderReady) return;
+    // Already showing this gender — the normal reload, where the server
+    // rendered exactly what the cookie asked for.
+    if (loadedGender.current === displayGender) return;
 
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
+    const target = displayGender;
     setFetching(true);
-    const opts = { limit: 10, gender };
+    const opts = { limit: 10, gender: target };
 
     Promise.all([
-      bannerApi.getByType('hero', gender),
-      bannerApi.getByType('promotional', gender),
+      bannerApi.getByType('hero', target),
+      bannerApi.getByType('promotional', target),
       productApi.getFeatured(opts),
       productApi.getNewArrivals(opts),
       productApi.getTrending(opts),
       productApi.getBestSellers(opts),
     ]).then(([bRes, promoRes, f, n, t, b]) => {
       if (controller.signal.aborted) return;
+      loadedGender.current = target;
       setHeroBanners((bRes.data as any)?.data || []);
       setPromoBanners((promoRes.data as any)?.data || []);
       setProducts({
@@ -143,7 +159,7 @@ export default function GenderHomePage({ sections, initialData }: Props) {
     });
 
     return () => { controller.abort(); };
-  }, [gender, hasMounted]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [displayGender, hasMounted, genderReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const genderLabel = displayGender === 'MEN' ? ' for Men' : ' for Women';
 
