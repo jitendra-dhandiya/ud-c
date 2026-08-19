@@ -13,7 +13,7 @@ import {
   useReactTable, getCoreRowModel, flexRender,
   createColumnHelper, ColumnDef,
 } from '@tanstack/react-table';
-import { productApi } from '../../../../services/api.service';
+import { productApi, categoryApi } from '../../../../services/api.service';
 import { formatPrice, formatDate } from '../../../../utils/format';
 import type { Product } from '../../../../types';
 import toast from 'react-hot-toast';
@@ -30,6 +30,12 @@ export default function AdminProductsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft'>('all');
+  const [genderFilter, setGenderFilter] = useState<'all' | 'WOMEN' | 'MEN' | 'UNISEX'>('all');
+  // Priority orders products *within a category*, so arranging it means
+  // filtering to one category first — the list is then exactly what a shopper
+  // browsing that category sees.
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   // Priority edits are staged rather than saved per keystroke, so renumbering a
   // page of products is one request instead of one per digit typed.
   const [priorityEdits, setPriorityEdits] = useState<Record<string, number>>({});
@@ -41,6 +47,12 @@ export default function AdminProductsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
+  useEffect(() => {
+    categoryApi.getAll({ limit: 200 })
+      .then(({ data }) => setCategories(((data as any).data || data || []) as any))
+      .catch(() => setCategories([]));
+  }, []);
+
   const fetchProducts = async () => {
     setLoading(true);
     try {
@@ -51,6 +63,8 @@ export default function AdminProductsPage() {
         limit,
         search: debouncedSearch || undefined,
         status: statusFilter === 'all' ? undefined : statusFilter,
+        categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
+        gender: genderFilter === 'all' ? undefined : genderFilter,
       });
       setProducts(data.data || []);
       setTotal(data.meta?.total || 0);
@@ -62,9 +76,9 @@ export default function AdminProductsPage() {
     }
   };
 
-  useEffect(() => { fetchProducts(); }, [page, debouncedSearch, statusFilter]);
+  useEffect(() => { fetchProducts(); }, [page, debouncedSearch, statusFilter, categoryFilter, genderFilter]);
   // Any filter change invalidates the current page number.
-  useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, categoryFilter, genderFilter]);
 
   const dirtyPriorities = Object.entries(priorityEdits).filter(([id, value]) => {
     const current = products.find(p => p.id === id)?.sortOrder ?? 0;
@@ -255,7 +269,7 @@ export default function AdminProductsPage() {
             Products ({total})
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            Priority orders every storefront section — higher shows first, 0 is the default.
+            Priority orders products inside a category — higher shows first, 0 is the default.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1.5}>
@@ -290,17 +304,60 @@ export default function AdminProductsPage() {
               InputProps={{ startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> }}
               sx={{ maxWidth: 360, flex: 1 }}
             />
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <Select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                startAdornment={<InputAdornment position="start"><FilterList fontSize="small" /></InputAdornment>}
+              >
+                <MenuItem value="all">All categories</MenuItem>
+                {categories.map((c) => (
+                  <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 130 }}>
+              <Select value={genderFilter} onChange={(e) => setGenderFilter(e.target.value as any)}>
+                <MenuItem value="all">All genders</MenuItem>
+                <MenuItem value="WOMEN">Women</MenuItem>
+                <MenuItem value="MEN">Men</MenuItem>
+                <MenuItem value="UNISEX">Unisex</MenuItem>
+              </Select>
+            </FormControl>
             <FormControl size="small" sx={{ minWidth: 150 }}>
               <Select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'draft')}
-                startAdornment={<InputAdornment position="start"><FilterList fontSize="small" /></InputAdornment>}
               >
                 <MenuItem value="all">All statuses</MenuItem>
                 <MenuItem value="active">Active only</MenuItem>
                 <MenuItem value="draft">Drafts only</MenuItem>
               </Select>
             </FormControl>
+            {(categoryFilter !== 'all' || genderFilter !== 'all' || statusFilter !== 'all' || search) && (
+              <Button
+                size="small"
+                onClick={() => { setCategoryFilter('all'); setGenderFilter('all'); setStatusFilter('all'); setSearch(''); }}
+                sx={{ color: '#888', whiteSpace: 'nowrap' }}
+              >
+                Clear
+              </Button>
+            )}
+          </Box>
+
+          {/* Priority is only meaningful within one category, so say so where
+              the admin is about to type numbers into it. */}
+          <Box sx={{
+            mb: 2.5, px: 2, py: 1.25, borderRadius: 1,
+            bgcolor: categoryFilter === 'all' ? '#fff8e1' : '#f1f8e9',
+            border: '1px solid',
+            borderColor: categoryFilter === 'all' ? '#ffe082' : '#c5e1a5',
+          }}>
+            <Typography variant="caption" sx={{ color: '#5d4037' }}>
+              {categoryFilter === 'all'
+                ? 'Priority orders products within a category. Pick a category above to arrange it — the list will then match what shoppers see on that category page.'
+                : `Showing this category in shopper order. Highest priority first; edit the numbers and press Save order.`}
+            </Typography>
           </Box>
 
           {/* Table */}

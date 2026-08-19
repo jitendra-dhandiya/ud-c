@@ -451,7 +451,7 @@ export default function AddProductPage() {
                     fullWidth
                     sx={{ mt: 2 }}
                     {...formik.getFieldProps('sortOrder')}
-                    helperText="Higher shows first across every section. 0 is the default; use a negative number to push a product down."
+                    helperText="Orders this product inside its category — higher shows first. 0 is the default; a negative number pushes it down."
                   />
                 </CardContent>
               </Card>
