@@ -12,11 +12,30 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-fade';
 
-// Responsive hero height — matches ~3:1 wide editorial banner format on desktop
-// xs ~260px → 375px wide → 1.44:1 (portrait crop on mobile, shows center)
-// md ~500px → 1440px wide → ~2.9:1 (close to 3:1 reference)
-// lg ~580px → 1920px wide → ~3.3:1
-const HERO_H = { xs: 260, sm: 400, md: 500, lg: 580 };
+// Hero artwork is authored at 1440x560 (2.57:1) and the backend crops every
+// desktop master to exactly that ratio.
+//
+// The height used to be fixed pixels per breakpoint (xs 260, sm 400, md 500).
+// A phone viewport is far taller relative to its width than 2.57:1, so
+// object-fit:cover had to slice the sides off to fill that box — at 375px wide
+// only 56% of the banner width survived, cutting straight through headlines
+// baked into the artwork ("BEST SELLERS" lost its last letter) and chopping the
+// models at both edges. Tablets were nearly as bad at 58%.
+//
+// Deriving the height from the artwork's own ratio means cover has nothing left
+// to crop, so the whole banner is always visible.
+const HERO_ASPECT = '1440 / 560';
+// A dedicated mobile crop is portrait by design, so it gets a portrait box
+// instead — that is the point of uploading one.
+const HERO_ASPECT_MOBILE_ART = '4 / 5';
+// The <picture> mobile source switches at 768px; the box must switch with it.
+const MOBILE_BP = '@media (max-width: 768px)';
+// Above this the 2.57:1 ratio would make the hero 747px tall and push the rest
+// of the page below the fold, so desktop keeps its established fixed height.
+const DESKTOP_BP = '@media (min-width: 1200px)';
+const HERO_H_DESKTOP = 580;
+// No artwork to respect in the empty state, so it keeps plain fixed heights.
+const PLACEHOLDER_H = { xs: 320, sm: 400, md: 500, lg: HERO_H_DESKTOP };
 
 interface HeroSliderProps {
   banners: Banner[];
@@ -26,7 +45,7 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
   if (!banners.length) {
     return (
       <Box sx={{
-        height: HERO_H,
+        height: PLACEHOLDER_H,
         position: 'relative', overflow: 'hidden',
         display: 'flex', alignItems: 'center',
         background: 'linear-gradient(135deg, #0d0d0d 0%, #1e1a14 60%, #2c2410 100%)',
@@ -73,10 +92,18 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
     );
   }
 
+  // Swiper gives every slide one shared height, so this is a per-slider
+  // decision rather than a per-banner one.
+  const hasMobileArt = banners.some((b) => b.mobileImage);
+
   return (
     <Box
       sx={{
-        height: HERO_H,
+        width: '100%',
+        aspectRatio: HERO_ASPECT,
+        height: 'auto',
+        ...(hasMobileArt && { [MOBILE_BP]: { aspectRatio: HERO_ASPECT_MOBILE_ART } }),
+        [DESKTOP_BP]: { aspectRatio: 'auto', height: HERO_H_DESKTOP },
         position: 'relative', overflow: 'hidden',
         '& .swiper, & .swiper-wrapper, & .swiper-slide': { height: '100%' },
         '& .swiper-pagination': { bottom: { xs: 14, md: 22 } },
@@ -95,6 +122,9 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
           width: 40, height: 40,
           '&::after': { fontSize: '14px', fontWeight: 700 },
           '&:hover': { opacity: 0.75 },
+          // Touch users swipe, and on the short mobile hero the arrows sit on
+          // top of the artwork they are meant to help you see.
+          [MOBILE_BP]: { display: 'none' },
         },
       }}
     >
@@ -150,41 +180,39 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
                   }}
                 />
               </picture>
-              {/* Multi-stop gradient for better text legibility */}
-              <Box sx={{
-                position: 'absolute', inset: 0,
-                // Lighter than before: it existed to make the headline legible, and with
-                // the headline gone a heavy scrim only dulls the image. Enough
-                // remains to keep the CTA readable on a bright banner.
-                background: 'linear-gradient(to right, rgba(0,0,0,0.34) 0%, rgba(0,0,0,0.12) 45%, rgba(0,0,0,0) 100%)',
-              }} />
-
-              <Container maxWidth="xl" sx={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center' }}>
-                <Box sx={{ color: 'white', maxWidth: { xs: '85%', md: 560 } }}>
-                  <motion.div initial={{ opacity: 0, x: -32 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.75 }}>
-                    {/* Title and subtitle intentionally not rendered — the
-                        artwork carries the message. Both fields remain on the
-                        model: title is the image alt text and identifies the
-                        banner in admin. */}
-                    {banner.ctaText && banner.link && (
-                      <Button
-                        component={Link} href={banner.link}
-                        variant="contained"
-                        sx={{
-                          bgcolor: 'white', color: '#111',
-                          fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.12em',
-                          py: { xs: 1.2, md: 1.7 }, px: { xs: 3.5, md: 5.5 },
-                          borderRadius: 0,
-                          '&:hover': { bgcolor: '#c9a84c', color: '#111' },
-                          transition: 'all 0.28s',
-                        }}
-                      >
-                        {banner.ctaText}
-                      </Button>
-                    )}
-                  </motion.div>
-                </Box>
-              </Container>
+              {/* Scrim and CTA only exist to make an overlaid button readable.
+                  Title and subtitle are intentionally not rendered — the artwork
+                  carries the message, and title remains the alt text and the
+                  banner's label in admin. With no CTA there is nothing to keep
+                  legible, so the scrim would only dull the artwork. */}
+              {banner.ctaText && banner.link && (
+                <>
+                  <Box sx={{
+                    position: 'absolute', inset: 0,
+                    background: 'linear-gradient(to right, rgba(0,0,0,0.34) 0%, rgba(0,0,0,0.12) 45%, rgba(0,0,0,0) 100%)',
+                  }} />
+                  <Container maxWidth="xl" sx={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center' }}>
+                    <Box sx={{ color: 'white', maxWidth: { xs: '85%', md: 560 } }}>
+                      <motion.div initial={{ opacity: 0, x: -32 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.75 }}>
+                        <Button
+                          component={Link} href={banner.link}
+                          variant="contained"
+                          sx={{
+                            bgcolor: 'white', color: '#111',
+                            fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.12em',
+                            py: { xs: 1.2, md: 1.7 }, px: { xs: 3.5, md: 5.5 },
+                            borderRadius: 0,
+                            '&:hover': { bgcolor: '#c9a84c', color: '#111' },
+                            transition: 'all 0.28s',
+                          }}
+                        >
+                          {banner.ctaText}
+                        </Button>
+                      </motion.div>
+                    </Box>
+                  </Container>
+                </>
+              )}
             </Box>
           </SwiperSlide>
         ))}
