@@ -122,14 +122,35 @@ export default function CollectionsPage() {
                             '&:hover .col-arrow': { transform: 'translateX(4px)' },
                           }}
                         >
-                          <Box sx={{ overflow: 'hidden', height: 320, position: 'relative' }}>
+                          {/* Collection artwork is portrait (sources run
+                              0.64-1.04). A fixed 320px height on a card that is
+                              ~760px wide at desktop made the frame 2.4:1, so
+                              cover had to throw away most of the picture to fill
+                              it — "Office wear" survived at 27% of its height,
+                              which is why the model had no head. Sizing by ratio
+                              instead keeps the frame in proportion to the card
+                              at every width. */}
+                          <Box sx={{
+                            aspectRatio: { xs: '1 / 1', md: '4 / 3' },
+                            maxHeight: 560,
+                            overflow: 'hidden',
+                            position: 'relative',
+                          }}>
                             {col.image ? (
                               <CardMedia
                                 className="col-img"
                                 component="img"
                                 image={col.image}
                                 alt={col.name}
-                                sx={{ height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+                                sx={{
+                                  width: '100%', height: '100%',
+                                  objectFit: 'cover',
+                                  // Bias upward: the face sits near the top of a
+                                  // full-length shot, so a centred crop removes
+                                  // exactly the part worth keeping.
+                                  objectPosition: 'center 25%',
+                                  transition: 'transform 0.5s ease',
+                                }}
                               />
                             ) : (
                               <Box
@@ -256,14 +277,28 @@ export default function CollectionsPage() {
                             '&:hover .col-img': { transform: 'scale(1.06)' },
                           }}
                         >
-                          <Box sx={{ overflow: 'hidden', height: 200, position: 'relative' }}>
+                          <Box sx={{
+                            // Square keeps far more of a portrait source than the
+                            // old 200px-tall, ~360px-wide frame did (1.8:1, 42%).
+                            aspectRatio: '1 / 1',
+                            overflow: 'hidden',
+                            position: 'relative',
+                          }}>
                             {col.image ? (
                               <CardMedia
                                 className="col-img"
                                 component="img"
                                 image={col.image}
                                 alt={col.name}
-                                sx={{ height: '100%', objectFit: 'cover', transition: 'transform 0.45s ease' }}
+                                sx={{
+                                  width: '100%', height: '100%',
+                                  objectFit: 'cover',
+                                  // Bias upward: the face sits near the top of a
+                                  // full-length shot, so a centred crop removes
+                                  // exactly the part worth keeping.
+                                  objectPosition: 'center 25%',
+                                  transition: 'transform 0.45s ease',
+                                }}
                               />
                             ) : (
                               <Box
