@@ -8,12 +8,13 @@ import {
   TableRow, TableCell, Dialog, DialogTitle, DialogContent,
   DialogActions, DialogContentText,
 } from '@mui/material';
-import { Add, Remove, ArrowBack, CloudUpload, Delete, Edit } from '@mui/icons-material';
+import { Add, Remove, ArrowBack, Delete, Edit } from '@mui/icons-material';
 import { useFormik, FormikProvider } from 'formik';
 import * as Yup from 'yup';
 import { productApi, categoryApi, variantApi } from '../../../../../services/api.service';
 import { GENDERS } from '../../../../../constants';
 import { toast } from 'react-hot-toast';
+import SortableImageGrid, { type SortableImage } from '../../../../../components/admin/SortableImageGrid';
 
 const schema = Yup.object({
   name: Yup.string().required('Product name required'),
@@ -39,6 +40,8 @@ export default function EditProductPage() {
   const [newImages, setNewImages] = useState<File[]>([]);
   const [newPreviews, setNewPreviews] = useState<string[]>([]);
   const [removedImageIds, setRemovedImageIds] = useState<string[]>([]);
+  // Ordered grid keys: existing image ids and `new:<n>` upload placeholders.
+  const [imageOrder, setImageOrder] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
 
   // Variant CRUD state
@@ -59,6 +62,8 @@ export default function EditProductPage() {
         const p = (data as any).data;
         setProduct(p);
         setVariants(p?.variants || []);
+        // Server returns images already sorted by position.
+        setImageOrder((p?.images || []).map((img: any) => img.id));
       })
       .catch(() => setLoadError('Product not found'));
   }, [id]);
@@ -125,7 +130,23 @@ export default function EditProductPage() {
         if (values.codShippingCharge !== '') fd.append('codShippingCharge', String(values.codShippingCharge));
         if (values.expressShippingCharge !== '') fd.append('expressShippingCharge', String(values.expressShippingCharge));
         if (removedImageIds.length) fd.append('removeImageIds', JSON.stringify(removedImageIds));
-        newImages.forEach(img => fd.append('images', img));
+
+        // Compact the tombstoned uploads, then remap the `new:<n>` tokens so
+        // each one points at the file's index in what actually gets sent —
+        // that index is how the backend resolves the token.
+        const tokenRemap = new Map<string, string>();
+        let sent = 0;
+        newImages.forEach((file, i) => {
+          if (!file) return;
+          fd.append('images', file);
+          tokenRemap.set(`new:${i}`, `new:${sent}`);
+          sent += 1;
+        });
+
+        fd.append(
+          'imageOrder',
+          JSON.stringify(imageOrder.map(k => tokenRemap.get(k) ?? k)),
+        );
 
         await productApi.update(id, fd);
         toast.success('Product updated!');
@@ -138,19 +159,31 @@ export default function EditProductPage() {
     },
   });
 
-  const handleNewImages = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+  const handleNewImages = (files: File[]) => {
+    if (!files.length) return;
     setNewImages(prev => [...prev, ...files]);
     setNewPreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
+    // New files land at the end of the order; the admin drags them from there.
+    setImageOrder(prev => [...prev, ...files.map((_, i) => `new:${newImages.length + i}`)]);
   };
 
-  const removeNewImage = (i: number) => {
-    setNewImages(prev => prev.filter((_, idx) => idx !== i));
-    setNewPreviews(prev => prev.filter((_, idx) => idx !== i));
-  };
-
-  const removeExistingImage = (imgId: string) => {
-    setRemovedImageIds(prev => [...prev, imgId]);
+  /**
+   * Remove by grid key — an existing image id, or `new:<n>` for a pending file.
+   *
+   * Pending files are tombstoned rather than spliced out of the array: their
+   * index IS the `new:<n>` token the backend resolves against the upload
+   * order, so re-indexing here would silently repoint every later token at the
+   * wrong file. Nulls are compacted once, at submit.
+   */
+  const removeImage = (key: string) => {
+    if (key.startsWith('new:')) {
+      const i = Number(key.slice(4));
+      setNewImages(prev => prev.map((f, idx) => (idx === i ? null : f)) as any);
+      setNewPreviews(prev => prev.map((src, idx) => (idx === i ? null : src)) as any);
+    } else {
+      setRemovedImageIds(prev => [...prev, key]);
+    }
+    setImageOrder(prev => prev.filter(k => k !== key));
   };
 
   const addTag = () => {
@@ -247,6 +280,18 @@ export default function EditProductPage() {
   }
 
   const visibleExistingImages = product.images?.filter((img: any) => !removedImageIds.includes(img.id)) || [];
+  const pendingCount = newPreviews.filter(Boolean).length;
+
+  // One ordered list mixing saved images and pending uploads, so a file picked
+  // seconds ago can be dragged into position 1 in the same save.
+  const gridImages: SortableImage[] = imageOrder.flatMap((key): SortableImage[] => {
+    if (key.startsWith('new:')) {
+      const src = newPreviews[Number(key.slice(4))];
+      return src ? [{ key, src, isNew: true }] : [];
+    }
+    const img = visibleExistingImages.find((i: any) => i.id === key);
+    return img ? [{ key, src: img.url }] : [];
+  });
 
   return (
     <FormikProvider value={formik}>
@@ -380,54 +425,15 @@ export default function EditProductPage() {
                   <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 2 }}>
                     Product Images
                     <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                      ({visibleExistingImages.length} existing{newImages.length ? ` + ${newImages.length} new` : ''})
+                      ({visibleExistingImages.length} existing{pendingCount ? ` + ${pendingCount} new` : ''})
                     </Typography>
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 2 }}>
-                    {visibleExistingImages.map((img: any) => (
-                      <Box key={img.id} sx={{ position: 'relative' }}>
-                        <Box component="img" src={img.url} alt=""
-                          sx={{ width: 90, height: 120, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
-                        {img.isPrimary && (
-                          <Chip label="Cover" size="small" sx={{
-                            position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)',
-                            fontSize: '0.55rem', height: 16, bgcolor: '#1a1a1a', color: '#fff',
-                          }} />
-                        )}
-                        <IconButton size="small" onClick={() => removeExistingImage(img.id)} sx={{
-                          position: 'absolute', top: -8, right: -8, bgcolor: '#fff', boxShadow: 1,
-                          '&:hover': { bgcolor: '#ffebee' }, p: 0.25, color: '#d32f2f',
-                        }}>
-                          <Delete sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      </Box>
-                    ))}
-                    {newPreviews.map((src, i) => (
-                      <Box key={`new-${i}`} sx={{ position: 'relative' }}>
-                        <Box component="img" src={src} alt=""
-                          sx={{ width: 90, height: 120, objectFit: 'cover', borderRadius: 1, border: '2px dashed #1a1a1a' }} />
-                        <Chip label="New" size="small" sx={{
-                          position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)',
-                          fontSize: '0.55rem', height: 16, bgcolor: '#e8f5e9', color: '#2e7d32',
-                        }} />
-                        <IconButton size="small" onClick={() => removeNewImage(i)} sx={{
-                          position: 'absolute', top: -8, right: -8, bgcolor: '#fff', boxShadow: 1, p: 0.25,
-                        }}>
-                          <Remove fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    ))}
-                    <Button component="label" variant="outlined" sx={{
-                      width: 90, height: 120, borderRadius: 1, borderStyle: 'dashed', flexDirection: 'column', gap: 0.5,
-                    }}>
-                      <CloudUpload fontSize="small" />
-                      <Typography variant="caption">Add</Typography>
-                      <input type="file" hidden accept="image/*" multiple onChange={handleNewImages} />
-                    </Button>
-                  </Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Click × on an image to remove it. New images are added alongside existing ones.
-                  </Typography>
+                  <SortableImageGrid
+                    images={gridImages}
+                    onReorder={(next) => setImageOrder(next.map(i => i.key))}
+                    onRemove={removeImage}
+                    onAdd={handleNewImages}
+                  />
                 </CardContent>
               </Card>
 

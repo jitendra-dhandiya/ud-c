@@ -5,12 +5,13 @@ import {
   Box, Typography, Button, Card, CardContent, Grid, TextField,
   MenuItem, FormControlLabel, Switch, Chip, IconButton, Divider,
 } from '@mui/material';
-import { Add, Remove, ArrowBack, CloudUpload } from '@mui/icons-material';
+import { Add, Remove, ArrowBack } from '@mui/icons-material';
 import { useFormik, FieldArray, FormikProvider } from 'formik';
 import * as Yup from 'yup';
 import { productApi, categoryApi } from '../../../../../services/api.service';
 import { GENDERS } from '../../../../../constants';
 import { toast } from 'react-hot-toast';
+import SortableImageGrid, { type SortableImage } from '../../../../../components/admin/SortableImageGrid';
 
 /**
  * Offered as quick-add chips only. Sizes are free text — a catalogue carries
@@ -135,15 +136,29 @@ export default function AddProductPage() {
     [formik.values.variants]
   );
 
-  const handleImages = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+  const handleImages = (files: File[]) => {
+    if (!files.length) return;
     setImages(prev => [...prev, ...files]);
     setImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
   };
 
-  const removeImage = (i: number) => {
+  const removeImage = (key: string) => {
+    const i = Number(key.slice(4));
     setImages(prev => prev.filter((_, idx) => idx !== i));
     setImagePreviews(prev => prev.filter((_, idx) => idx !== i));
+  };
+
+  // On create the backend assigns sortOrder from the upload index, so putting
+  // the files in the chosen order is all the ordering this form needs.
+  const gridImages: SortableImage[] = imagePreviews.map((src, i) => ({
+    key: `new:${i}`,
+    src,
+  }));
+
+  const reorderImages = (next: SortableImage[]) => {
+    const order = next.map(item => Number(item.key.slice(4)));
+    setImages(prev => order.map(i => prev[i]));
+    setImagePreviews(prev => order.map(i => prev[i]));
   };
 
   const addTag = () => {
@@ -237,30 +252,13 @@ export default function AddProductPage() {
               <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, mb: 3 }}>
                 <CardContent sx={{ p: 3 }}>
                   <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 2 }}>Product Images</Typography>
-                  <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 2 }}>
-                    {imagePreviews.map((src, i) => (
-                      <Box key={i} sx={{ position: 'relative' }}>
-                        <Box component="img" src={src} alt=""
-                          sx={{ width: 90, height: 120, objectFit: 'cover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }} />
-                        <IconButton size="small" onClick={() => removeImage(i)} sx={{
-                          position: 'absolute', top: -8, right: -8, bgcolor: '#fff', boxShadow: 1,
-                          '&:hover': { bgcolor: '#fff' }, p: 0.25,
-                        }}>
-                          <Remove fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    ))}
-                    <Button component="label" variant="outlined" sx={{
-                      width: 90, height: 120, borderRadius: 1, borderStyle: 'dashed', flexDirection: 'column', gap: 0.5,
-                    }}>
-                      <CloudUpload fontSize="small" />
-                      <Typography variant="caption">Add</Typography>
-                      <input type="file" hidden accept="image/*" multiple onChange={handleImages} />
-                    </Button>
-                  </Box>
-                  <Typography variant="caption" color="text.secondary">
-                    First image will be the cover. Images are auto-optimized to WebP.
-                  </Typography>
+                  <SortableImageGrid
+                    images={gridImages}
+                    onReorder={reorderImages}
+                    onRemove={removeImage}
+                    onAdd={handleImages}
+                    helperText="Drag to reorder — image 1 is the cover shown on listings and first in the gallery. Images are auto-optimized."
+                  />
                 </CardContent>
               </Card>
 
