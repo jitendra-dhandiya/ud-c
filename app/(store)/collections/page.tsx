@@ -170,13 +170,35 @@ export default function CollectionsPage() {
                             )}
                           </Box>
                           <CardContent sx={{ p: 2.5 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                              <Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1.5 }}>
+                              {/* minWidth:0 is what makes the clamp below work.
+                                  A flex item defaults to min-width:auto, so it
+                                  refuses to shrink below its content's width —
+                                  the text box then grew wider than the card,
+                                  its own overflow never triggered, and the
+                                  Card's overflow:hidden did the cutting
+                                  instead. That is why the description was
+                                  sliced mid-word with no ellipsis. */}
+                              <Box sx={{ minWidth: 0 }}>
                                 <Typography variant="h6" fontWeight={700} sx={{ color: '#1a1a1a' }}>
                                   {col.name}
                                 </Typography>
                                 {col.description && (
-                                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }} noWrap>
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{
+                                      mt: 0.5,
+                                      // A clamp is a maximum, not a fixed height, so
+                                      // desktop still uses only the two lines these
+                                      // 128-148 character descriptions need, while a
+                                      // narrow card gets a third line before it cuts.
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 3,
+                                      WebkitBoxOrient: 'vertical',
+                                      overflow: 'hidden',
+                                    }}
+                                  >
                                     {col.description}
                                   </Typography>
                                 )}
@@ -277,7 +299,16 @@ export default function CollectionsPage() {
                               {col.name}
                             </Typography>
                             {col.description && (
-                              <Typography variant="caption" color="text.secondary" noWrap display="block">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                }}
+                              >
                                 {col.description}
                               </Typography>
                             )}
