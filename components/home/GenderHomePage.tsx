@@ -12,7 +12,7 @@ import PromoBanners from './PromoBanners';
 import StoreLocations from './StoreLocations';
 import MarqueeStrip from './MarqueeStrip';
 import InstagramReels from './InstagramReels';
-import { productApi, bannerApi } from '../../services/api.service';
+import { productApi, bannerApi, instagramReelsApi } from '../../services/api.service';
 import type { GenderType } from '../../lib/genderPreference';
 
 // ── Promo strip ────────────────────────────────────────────────
@@ -106,6 +106,9 @@ export default function GenderHomePage({ sections, initialGender, initialData }:
   });
   const [heroBanners, setHeroBanners] = useState<any[]>(initialData.heroBanners);
   const [promoBanners, setPromoBanners] = useState<any[]>(initialData.promoBanners);
+  // Reels are gender-targeted like banners, so they move with the toggle
+  // instead of staying on whatever the server first rendered.
+  const [reels, setReels] = useState<any[]>(initialData.reels);
   const [fetching, setFetching] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   /**
@@ -141,11 +144,13 @@ export default function GenderHomePage({ sections, initialGender, initialData }:
       productApi.getNewArrivals(opts),
       productApi.getTrending(opts),
       productApi.getBestSellers(opts),
-    ]).then(([bRes, promoRes, f, n, t, b]) => {
+      instagramReelsApi.getActive(target),
+    ]).then(([bRes, promoRes, f, n, t, b, reelRes]) => {
       if (controller.signal.aborted) return;
       loadedGender.current = target;
       setHeroBanners((bRes.data as any)?.data || []);
       setPromoBanners((promoRes.data as any)?.data || []);
+      setReels((reelRes.data as any)?.data || []);
       setProducts({
         featured: (f.data as any)?.data || [],
         newArrivals: (n.data as any)?.data || [],
@@ -249,7 +254,7 @@ export default function GenderHomePage({ sections, initialGender, initialData }:
       case 'MARQUEE':
         return <MarqueeStrip key={section.id} config={section.config || {}} />;
       case 'INSTAGRAM_REELS':
-        return <InstagramReels key={section.id} reels={initialData.reels} sectionTitle={section.title} />;
+        return <InstagramReels key={section.id} reels={reels} sectionTitle={section.title} />;
       default:
         return null;
     }
@@ -318,8 +323,8 @@ export default function GenderHomePage({ sections, initialGender, initialData }:
       </Box>
 
       {/* 9. Instagram Reels */}
-      {initialData.reels?.length > 0 && (
-        <InstagramReels reels={initialData.reels} />
+      {reels?.length > 0 && (
+        <InstagramReels reels={reels} />
       )}
 
       {/* 10. Social proof */}

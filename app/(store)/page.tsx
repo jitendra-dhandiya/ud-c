@@ -46,9 +46,12 @@ async function getStores() {
   } catch { return []; }
 }
 
-async function getReels() {
+async function getReels(gender: GenderType) {
   try {
-    const res = await fetch(`${API}/instagram-reels`, { cache: 'no-store' });
+    // Reels are art-directed per storefront, so the server has to render the
+    // right row for the cookie's gender — otherwise a MEN shopper gets a flash
+    // of women's reels before the client refetch corrects it.
+    const res = await fetch(`${API}/instagram-reels?gender=${gender}`, { cache: 'no-store' });
     if (!res.ok) return [];
     return (await res.json()).data || [];
   } catch { return []; }
@@ -68,7 +71,7 @@ export default async function HomePage() {
     getProducts('best-sellers', gender),
     getCategories(),
     getStores(),
-    getReels(),
+    getReels(gender),
   ]);
 
   const sections: any[] = homepageData?.sections || [];

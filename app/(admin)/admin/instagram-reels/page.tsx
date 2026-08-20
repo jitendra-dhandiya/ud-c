@@ -5,7 +5,7 @@ import {
   TableHead, TableRow, IconButton, Chip, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Switch, FormControlLabel,
   Alert, Snackbar, Tooltip, Avatar, Stack, CircularProgress,
-  Grid, InputAdornment, LinearProgress,
+  Grid, InputAdornment, LinearProgress, MenuItem,
 } from '@mui/material';
 import {
   Add, Edit, Delete, DragIndicator, Instagram, OpenInNew,
@@ -21,9 +21,25 @@ interface Reel {
   reelUrl: string;
   videoUrl?: string;
   thumbnail?: string;
+  /** Storefront this reel is aimed at: ALL, WOMEN or MEN. */
+  gender?: string;
   isActive: boolean;
   sortOrder: number;
 }
+
+/**
+ * Same vocabulary as banners, so "target gender" means one thing across the
+ * admin. ALL is the default — a reel nobody has tagged keeps showing on both
+ * storefronts rather than disappearing from both.
+ */
+const GENDERS = [
+  { value: 'ALL', label: 'All Genders', short: 'ALL', color: '#607d8b' },
+  { value: 'WOMEN', label: 'Women only', short: 'WOMEN', color: '#e91e8c' },
+  { value: 'MEN', label: 'Men only', short: 'MEN', color: '#1565c0' },
+];
+
+const genderColor = (g?: string) =>
+  GENDERS.find(x => x.value === (g || 'ALL'))?.color || '#607d8b';
 
 const EMPTY: Partial<Reel> = {
   title: '',
@@ -31,6 +47,7 @@ const EMPTY: Partial<Reel> = {
   reelUrl: '',
   videoUrl: '',
   thumbnail: '',
+  gender: 'ALL',
   isActive: true,
   sortOrder: 0,
 };
@@ -50,6 +67,10 @@ export default function InstagramReelsAdminPage() {
   // Uploaded files take precedence over the URL fields on submit.
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbFile, setThumbFile] = useState<File | null>(null);
+  // Which target the table is scoped to. '' is everything; the values match
+  // Reel.gender exactly, so this is a plain equality filter rather than the
+  // storefront's "this gender + ALL" union.
+  const [genderFilter, setGenderFilter] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -66,7 +87,8 @@ export default function InstagramReelsAdminPage() {
   useEffect(() => { load(); }, []);
 
   const openAdd = () => {
-    setEditReel({ ...EMPTY, sortOrder: reels.length });
+    // Adding while filtered to Men almost always means adding a men's reel.
+    setEditReel({ ...EMPTY, gender: genderFilter || 'ALL', sortOrder: reels.length });
     setEditingId(null);
     setVideoFile(null);
     setThumbFile(null);
@@ -74,7 +96,7 @@ export default function InstagramReelsAdminPage() {
   };
 
   const openEdit = (r: Reel) => {
-    setEditReel({ ...r });
+    setEditReel({ ...r, gender: r.gender || 'ALL' });
     setEditingId(r.id);
     setVideoFile(null);
     setThumbFile(null);
@@ -101,6 +123,7 @@ export default function InstagramReelsAdminPage() {
         fd.append('reelUrl', editReel.reelUrl || '');
         fd.append('title', editReel.title || '');
         fd.append('caption', editReel.caption || '');
+        fd.append('gender', editReel.gender || 'ALL');
         fd.append('isActive', String(editReel.isActive !== false));
         fd.append('sortOrder', String(editReel.sortOrder ?? 0));
         if (!videoFile && editReel.videoUrl) fd.append('videoUrl', editReel.videoUrl);
@@ -166,6 +189,12 @@ export default function InstagramReelsAdminPage() {
   const field = (key: keyof Reel) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setEditReel(prev => ({ ...prev, [key]: e.target.value }));
 
+  // Filtered client-side: the whole list is already loaded and it is small, so
+  // a round-trip per filter click would only add latency.
+  const visibleReels = genderFilter
+    ? reels.filter(r => (r.gender || 'ALL') === genderFilter)
+    : reels;
+
   return (
     <Box>
       {/* Header */}
@@ -200,10 +229,11 @@ export default function InstagramReelsAdminPage() {
         {[
           { label: 'Total Reels', value: reels.length, color: '#1a1a1a' },
           { label: 'Active', value: reels.filter(r => r.isActive).length, color: '#2e7d32' },
-          { label: 'With Video', value: reels.filter(r => r.videoUrl).length, color: '#1565c0' },
+          { label: 'Shown to Women', value: reels.filter(r => (r.gender || 'ALL') !== 'MEN').length, color: '#e91e8c' },
+          { label: 'Shown to Men', value: reels.filter(r => (r.gender || 'ALL') !== 'WOMEN').length, color: '#1565c0' },
           { label: 'Missing Video', value: reels.filter(r => !r.videoUrl).length, color: '#e65100' },
         ].map(stat => (
-          <Grid item xs={6} sm={3} key={stat.label}>
+          <Grid item xs={6} sm={4} md={2.4} key={stat.label}>
             <Card sx={{ p: 2, borderRadius: 2, borderLeft: `4px solid ${stat.color}` }}>
               <Typography variant="h4" fontWeight={900} sx={{ color: stat.color }}>{stat.value}</Typography>
               <Typography variant="caption" color="text.secondary" fontWeight={600}>{stat.label}</Typography>
@@ -215,7 +245,39 @@ export default function InstagramReelsAdminPage() {
       {/* Info banner */}
       <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
         <strong>Upload the video — that is the reel.</strong> It plays on hover on the homepage, muted, and is re-encoded on upload to a web-optimised 720px version so it starts instantly instead of buffering. The poster frame is generated automatically. Minimum 720px wide, vertical 9:16 — use the original file.
+        <br />
+        <strong>Show To</strong> decides which storefront it appears on: a <em>Women only</em> reel is hidden when the shopper switches to Men, and <em>All Genders</em> plays on both.
       </Alert>
+
+      {/* Gender filter */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+        <Typography variant="caption" fontWeight={700} sx={{ color: '#666', mr: 0.5 }}>
+          SHOW:
+        </Typography>
+        {[{ value: '', label: 'All reels', color: '#1a1a1a' }, ...GENDERS].map(opt => {
+          const selected = genderFilter === opt.value;
+          const count = opt.value
+            ? reels.filter(r => (r.gender || 'ALL') === opt.value).length
+            : reels.length;
+          return (
+            <Chip
+              key={opt.value || 'all'}
+              label={`${opt.label} (${count})`}
+              size="small"
+              onClick={() => setGenderFilter(opt.value)}
+              sx={{
+                fontWeight: 700,
+                fontSize: '0.7rem',
+                cursor: 'pointer',
+                bgcolor: selected ? opt.color : 'transparent',
+                color: selected ? '#fff' : opt.color,
+                border: `1px solid ${opt.color}`,
+                '&:hover': { bgcolor: selected ? opt.color : `${opt.color}18` },
+              }}
+            />
+          );
+        })}
+      </Box>
 
       {/* Table */}
       <Card sx={{ borderRadius: 2, overflow: 'hidden' }}>
@@ -223,11 +285,17 @@ export default function InstagramReelsAdminPage() {
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress />
           </Box>
-        ) : reels.length === 0 ? (
+        ) : visibleReels.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 8 }}>
             <Instagram sx={{ fontSize: 56, color: '#ddd', mb: 2 }} />
-            <Typography color="text.secondary" fontWeight={600}>No reels yet</Typography>
-            <Typography variant="caption" color="text.secondary">Click "Add Reel" to get started</Typography>
+            <Typography color="text.secondary" fontWeight={600}>
+              {genderFilter ? `No reels targeted at ${genderFilter}` : 'No reels yet'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {genderFilter
+                ? 'Reels tagged "All Genders" show here too — clear the filter to see them.'
+                : 'Click "Add Reel" to get started'}
+            </Typography>
           </Box>
         ) : (
           <Table>
@@ -236,13 +304,14 @@ export default function InstagramReelsAdminPage() {
                 <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem' }}>#</TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem' }}>Preview</TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem' }}>Title / Caption</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem' }}>Shown To</TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem' }}>Mode</TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem' }}>Status</TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem' }} align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {reels.map((reel, i) => {
+              {visibleReels.map((reel, i) => {
                 return (
                   <TableRow key={reel.id} sx={{ '&:hover': { bgcolor: '#fafafa' } }}>
                     <TableCell>
@@ -298,6 +367,19 @@ export default function InstagramReelsAdminPage() {
                       >
                         View reel <OpenInNew sx={{ fontSize: 10 }} />
                       </Box>
+                    </TableCell>
+
+                    <TableCell>
+                      <Chip
+                        label={GENDERS.find(g => g.value === (reel.gender || 'ALL'))?.short || 'ALL'}
+                        size="small"
+                        sx={{
+                          bgcolor: genderColor(reel.gender),
+                          color: '#fff',
+                          fontWeight: 700,
+                          fontSize: '0.65rem',
+                        }}
+                      />
                     </TableCell>
 
                     <TableCell>
@@ -392,6 +474,26 @@ export default function InstagramReelsAdminPage() {
             fullWidth size="small"
             multiline rows={2}
           />
+
+          {/* Target gender */}
+          <TextField
+            select
+            label="Show To"
+            value={editReel.gender || 'ALL'}
+            onChange={(e) => setEditReel(prev => ({ ...prev, gender: e.target.value }))}
+            fullWidth size="small"
+            helperText="Which storefront plays this reel. All Genders shows it under both toggles."
+          >
+            {GENDERS.map(g => (
+              <MenuItem key={g.value} value={g.value}>
+                <Box component="span" sx={{
+                  display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+                  bgcolor: g.color, mr: 1,
+                }} />
+                {g.label}
+              </MenuItem>
+            ))}
+          </TextField>
 
           {/* Direct Video URL */}
           <Box>

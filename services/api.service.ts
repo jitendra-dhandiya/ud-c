@@ -224,8 +224,13 @@ export const blogApi = {
 const UPLOAD_TIMEOUT_MS = 10 * 60 * 1000;
 
 export const instagramReelsApi = {
-  getActive: () => api.get('/instagram-reels'),
-  getAll: () => api.get('/instagram-reels/admin'),
+  // `gender` scopes the storefront row to WOMEN/MEN reels plus the untargeted
+  // ones; omitting it returns everything, which is what an unfiltered listing
+  // wants.
+  getActive: (gender?: string) =>
+    api.get('/instagram-reels', { params: gender ? { gender } : undefined }),
+  getAll: (gender?: string) =>
+    api.get('/instagram-reels/admin', { params: gender ? { gender } : undefined }),
   create: (data: object) => api.post('/instagram-reels', data, { timeout: UPLOAD_TIMEOUT_MS }),
   update: (id: string, data: object) =>
     api.put(`/instagram-reels/${id}`, data, { timeout: UPLOAD_TIMEOUT_MS }),
