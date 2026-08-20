@@ -13,6 +13,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 import { Box, Typography, IconButton, Chip, Button } from '@mui/material';
 import { Delete, CloudUpload, DragIndicator } from '@mui/icons-material';
+import { useImageCropperBatch } from '../common/ImageCropperProvider';
 
 export interface SortableImage {
   /** Stable identity: an existing image id, or `new:<n>` for a pending upload. */
@@ -127,6 +128,7 @@ function SortableTile({ image, index, onRemove }: {
 export default function SortableImageGrid({
   images, onReorder, onRemove, onAdd, helperText,
 }: Props) {
+  const cropImages = useImageCropperBatch();
   const [activeKey, setActiveKey] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -171,10 +173,12 @@ export default function SortableImageGrid({
               <Typography variant="caption">Add</Typography>
               <input
                 type="file" hidden accept="image/*" multiple
-                onChange={(e) => {
-                  onAdd(Array.from(e.target.files || []));
+                onChange={async (e) => {
+                  const picked = Array.from(e.target.files || []);
                   // Reset so picking the same file twice still fires onChange.
                   e.target.value = '';
+                  if (!picked.length) return;
+                  onAdd(await cropImages(picked, 'product'));
                 }}
               />
             </Button>

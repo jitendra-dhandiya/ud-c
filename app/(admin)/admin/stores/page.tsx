@@ -8,6 +8,7 @@ import {
 import { Add, Edit, Delete, CloudUpload, Close } from '@mui/icons-material';
 import { storeApi } from '../../../../services/api.service';
 import { toast } from 'react-hot-toast';
+import { useImageCropper } from '../../../../components/common/ImageCropperProvider';
 
 interface Store {
   id: string;
@@ -28,6 +29,7 @@ const EMPTY_FORM = {
 };
 
 export default function StoresAdminPage() {
+  const cropImage = useImageCropper();
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -70,16 +72,21 @@ export default function StoresAdminPage() {
     setDialogOpen(true);
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
+    // The size check moved behind the cropper: cropping re-encodes to fit the
+    // 2 MB store cap, so a heavy original is now recoverable rather than
+    // rejected outright.
+    const cropped = await cropImage(file, 'store');
+    if (!cropped) return;
+    if (cropped.size > 2 * 1024 * 1024) {
       toast.error('Image must be 2 MB or smaller');
-      e.target.value = '';
       return;
     }
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    setImageFile(cropped);
+    setImagePreview(URL.createObjectURL(cropped));
   };
 
   const clearImage = () => {

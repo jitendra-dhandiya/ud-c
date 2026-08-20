@@ -12,6 +12,7 @@ import {
   VideoLibrary, Image as ImageIcon, Link as LinkIcon, CheckCircle, Cancel,
 } from '@mui/icons-material';
 import api from '../../../../lib/axios';
+import { useImageCropper } from '../../../../components/common/ImageCropperProvider';
 // Shared with the storefront embed so both accept exactly the same URLs.
 
 interface Reel {
@@ -53,6 +54,7 @@ const EMPTY: Partial<Reel> = {
 };
 
 export default function InstagramReelsAdminPage() {
+  const cropImage = useImageCropper();
   const [reels, setReels] = useState<Reel[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -555,8 +557,13 @@ export default function InstagramReelsAdminPage() {
                 hidden
                 type="file"
                 accept="image/*"
-                onChange={(e) => {
-                  const f = e.target.files?.[0] || null;
+                onChange={async (e) => {
+                  const picked = e.target.files?.[0] || null;
+                  e.target.value = '';
+                  if (!picked) { setThumbFile(null); return; }
+                  // Framed to 9:16 up front, so the poster matches the tile the
+                  // video plays in instead of being centre-cropped into it.
+                  const f = await cropImage(picked, 'reelPoster');
                   setThumbFile(f);
                   if (!f) return;
                   // Read the dimensions locally so an undersized poster is

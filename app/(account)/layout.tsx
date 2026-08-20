@@ -3,11 +3,12 @@ import Footer from '../../components/layout/Footer';
 import MobileBottomNav from '../../components/layout/MobileBottomNav';
 import AuthInitializer from '../../components/common/AuthInitializer';
 import AccountSidebar from '../../components/account/AccountSidebar';
+import ImageCropperProvider from '../../components/common/ImageCropperProvider';
 import { Box, Container, Grid } from '@mui/material';
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <ImageCropperProvider>
       <AuthInitializer />
       <Navbar />
       <Box sx={{ bgcolor: '#fafafa', minHeight: '80vh', py: 4 }}>
@@ -24,6 +25,6 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
       </Box>
       <Footer />
       <MobileBottomNav />
-    </>
+    </ImageCropperProvider>
   );
 }

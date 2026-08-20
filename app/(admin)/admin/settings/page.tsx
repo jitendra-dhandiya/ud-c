@@ -11,6 +11,7 @@ import Image from 'next/image';
 import { settingsApi } from '../../../../services/api.service';
 import api from '../../../../lib/axios';
 import { toast } from 'react-hot-toast';
+import { useImageCropper } from '../../../../components/common/ImageCropperProvider';
 
 interface TabPanelProps { children?: React.ReactNode; index: number; value: number; }
 const TabPanel = ({ children, value, index }: TabPanelProps) => (
@@ -24,6 +25,7 @@ interface LogoUploaderProps {
 }
 
 function LogoUploader({ value, onChange }: LogoUploaderProps) {
+  const cropImage = useImageCropper();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -53,17 +55,24 @@ function LogoUploader({ value, onChange }: LogoUploaderProps) {
     }
   };
 
+  // Both entry points crop first. A logo dropped onto the panel and a logo
+  // picked from the dialog should behave identically.
+  const cropThenUpload = async (file?: File | null) => {
+    if (!file) return;
+    const cropped = await cropImage(file, 'logo');
+    if (cropped) upload(cropped);
+  };
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) upload(file);
     e.target.value = '';
+    void cropThenUpload(file);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) upload(file);
+    void cropThenUpload(e.dataTransfer.files?.[0]);
   };
 
   return (

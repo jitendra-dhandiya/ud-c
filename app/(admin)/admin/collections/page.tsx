@@ -12,6 +12,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { collectionApi, productApi } from '../../../../services/api.service';
 import { toast } from 'react-hot-toast';
+import { useImageCropper } from '../../../../components/common/ImageCropperProvider';
 
 const PAGE_SIZE = 20;
 const schema = Yup.object({ name: Yup.string().required('Name required'), description: Yup.string() });
@@ -239,6 +240,7 @@ function ManageProductsDialog({
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function CollectionsPage() {
+  const cropImage = useImageCropper();
   const [collections, setCollections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -385,9 +387,14 @@ export default function CollectionsPage() {
               {imagePreview && <Box component="img" src={imagePreview} sx={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 1, mb: 1 }} />}
               <Button variant="outlined" component="label" size="small">
                 {imagePreview ? 'Change Image' : 'Upload Image'}
-                <input type="file" hidden accept="image/*" onChange={e => {
+                <input type="file" hidden accept="image/*" onChange={async e => {
                   const f = e.target.files?.[0];
-                  if (f) { setImageFile(f); setImagePreview(URL.createObjectURL(f)); }
+                  // Cleared before the await so re-picking the same file after
+                  // cancelling the cropper still fires onChange.
+                  e.target.value = '';
+                  if (!f) return;
+                  const cropped = await cropImage(f, 'collection');
+                  if (cropped) { setImageFile(cropped); setImagePreview(URL.createObjectURL(cropped)); }
                 }} />
               </Button>
             </Box>

@@ -12,6 +12,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { categoryApi } from '../../../../services/api.service';
 import { toast } from 'react-hot-toast';
+import { useImageCropper } from '../../../../components/common/ImageCropperProvider';
 
 const PAGE_SIZE = 20;
 
@@ -38,6 +39,7 @@ const schema = Yup.object({
 });
 
 export default function CategoriesPage() {
+  const cropImage = useImageCropper();
   const [categories, setCategories]     = useState<any[]>([]);
   const [parents, setParents]           = useState<any[]>([]);
   const [loading, setLoading]           = useState(true);
@@ -446,9 +448,12 @@ export default function CategoriesPage() {
                   <Typography variant="caption" color="text.secondary">Click to upload · JPG, PNG, WebP</Typography>
                 </Box>
               )}
-              <input ref={fileRef} type="file" hidden accept="image/*" onChange={e => {
+              <input ref={fileRef} type="file" hidden accept="image/*" onChange={async e => {
                 const f = e.target.files?.[0];
-                if (f) { setImageFile(f); setImagePreview(URL.createObjectURL(f)); }
+                e.target.value = '';
+                if (!f) return;
+                const cropped = await cropImage(f, 'category');
+                if (cropped) { setImageFile(cropped); setImagePreview(URL.createObjectURL(cropped)); }
               }} />
               {imagePreview && (
                 <Button size="small" variant="outlined" onClick={() => fileRef.current?.click()} sx={{ fontSize: '0.72rem', borderColor: '#ddd', color: '#555' }}>

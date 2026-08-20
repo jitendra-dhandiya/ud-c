@@ -12,6 +12,7 @@ import * as Yup from 'yup';
 import { blogApi } from '../../../../services/api.service';
 import { formatDate } from '../../../../utils/format';
 import { toast } from 'react-hot-toast';
+import { useImageCropper } from '../../../../components/common/ImageCropperProvider';
 
 const schema = Yup.object({
   title: Yup.string().required('Title required'),
@@ -23,6 +24,7 @@ const schema = Yup.object({
 });
 
 export default function BlogsPage() {
+  const cropImage = useImageCropper();
   const [blogs, setBlogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -148,9 +150,12 @@ export default function BlogsPage() {
               )}
               <Button variant="outlined" component="label" size="small">
                 {imagePreview ? 'Change Cover' : 'Upload Cover Image'}
-                <input type="file" hidden accept="image/*" onChange={e => {
+                <input type="file" hidden accept="image/*" onChange={async e => {
                   const f = e.target.files?.[0];
-                  if (f) { setImageFile(f); setImagePreview(URL.createObjectURL(f)); }
+                  e.target.value = '';
+                  if (!f) return;
+                  const cropped = await cropImage(f, 'blog');
+                  if (cropped) { setImageFile(cropped); setImagePreview(URL.createObjectURL(cropped)); }
                 }} />
               </Button>
             </Box>

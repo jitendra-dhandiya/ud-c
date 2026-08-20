@@ -12,6 +12,7 @@ import { userApi } from '../../../../services/api.service';
 import { setUser } from '../../../../store/slices/authSlice';
 import { toast } from 'react-hot-toast';
 import type { RootState } from '../../../../store';
+import { useImageCropper } from '../../../../components/common/ImageCropperProvider';
 
 const profileSchema = Yup.object({
   firstName: Yup.string().required('First name required'),
@@ -26,6 +27,7 @@ const passwordSchema = Yup.object({
 });
 
 export default function ProfilePage() {
+  const cropImage = useImageCropper();
   const user = useSelector((state: RootState) => state.auth.user);
   const dispatch = useDispatch();
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -74,9 +76,14 @@ export default function ProfilePage() {
     },
   });
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) { setAvatarFile(file); setAvatarPreview(URL.createObjectURL(file)); }
+    e.target.value = '';
+    if (!file) return;
+    // Avatars render in a circle, so a square crop is the only shape that does
+    // not lose someone's chin to the mask.
+    const cropped = await cropImage(file, 'avatar');
+    if (cropped) { setAvatarFile(cropped); setAvatarPreview(URL.createObjectURL(cropped)); }
   };
 
   if (!user) return <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} />;

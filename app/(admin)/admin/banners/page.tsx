@@ -12,6 +12,7 @@ import * as Yup from 'yup';
 import { bannerApi } from '../../../../services/api.service';
 import { formatDate } from '../../../../utils/format';
 import { toast } from 'react-hot-toast';
+import { useImageCropper } from '../../../../components/common/ImageCropperProvider';
 
 const BANNER_TYPES = ['HERO', 'PROMOTIONAL', 'CATEGORY', 'ANNOUNCEMENT', 'POPUP'];
 const PAGE_SIZE = 12;
@@ -24,6 +25,7 @@ const schema = Yup.object({
 });
 
 export default function BannersPage() {
+  const cropImage = useImageCropper();
   const [banners, setBanners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -237,15 +239,18 @@ export default function BannersPage() {
               )}
               <Button variant="outlined" component="label" size="small">
                 {imagePreview ? 'Change Image' : 'Upload Image'}
-                <input type="file" hidden accept="image/jpeg,image/jpg,image/png,image/webp" onChange={e => {
+                <input type="file" hidden accept="image/jpeg,image/jpg,image/png,image/webp" onChange={async e => {
                   const f = e.target.files?.[0];
+                  e.target.value = '';
                   if (!f) return;
                   if (f.size > 25 * 1024 * 1024) {
                     toast.error('Image must be 25 MB or smaller');
-                    e.target.value = '';
                     return;
                   }
-                  setImageFile(f); setImagePreview(URL.createObjectURL(f));
+                  // Framed to the hero's own 1440:560, so the storefront has
+                  // nothing left to crop off the sides.
+                  const cropped = await cropImage(f, 'bannerDesktop');
+                  if (cropped) { setImageFile(cropped); setImagePreview(URL.createObjectURL(cropped)); }
                 }} />
               </Button>
 
@@ -257,15 +262,16 @@ export default function BannersPage() {
                 )}
                 <Button variant="outlined" component="label" size="small">
                   {mobilePreview ? 'Change Mobile Image' : 'Upload Mobile Image (optional)'}
-                  <input type="file" hidden accept="image/jpeg,image/jpg,image/png,image/webp" onChange={e => {
+                  <input type="file" hidden accept="image/jpeg,image/jpg,image/png,image/webp" onChange={async e => {
                     const f = e.target.files?.[0];
+                    e.target.value = '';
                     if (!f) return;
                     if (f.size > 25 * 1024 * 1024) {
                       toast.error('Image must be 25 MB or smaller');
-                      e.target.value = '';
                       return;
                     }
-                    setMobileFile(f); setMobilePreview(URL.createObjectURL(f));
+                    const cropped = await cropImage(f, 'bannerMobile');
+                    if (cropped) { setMobileFile(cropped); setMobilePreview(URL.createObjectURL(cropped)); }
                   }} />
                 </Button>
                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>

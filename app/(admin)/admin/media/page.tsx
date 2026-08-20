@@ -9,8 +9,10 @@ import { CloudUpload, Delete, ContentCopy, Search, Close } from '@mui/icons-mate
 import { mediaApi } from '../../../../services/api.service';
 import { formatDate } from '../../../../utils/format';
 import { toast } from 'react-hot-toast';
+import { useImageCropperBatch } from '../../../../components/common/ImageCropperProvider';
 
 export default function MediaPage() {
+  const cropImages = useImageCropperBatch();
   const [media, setMedia] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -33,7 +35,12 @@ export default function MediaPage() {
   }, [fetchMedia, search]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    const picked = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!picked.length) return;
+    // One dialog per file, in order. Anything cancelled is dropped rather than
+    // uploaded raw — a cancel means "not this one", not "skip the crop".
+    const files = await cropImages(picked, 'media');
     if (!files.length) return;
     setUploading(true);
     try {
