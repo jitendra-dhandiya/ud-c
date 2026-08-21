@@ -129,3 +129,39 @@ img { max-width: 100%; height: auto; }
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
 }
+
+
+/* ── Page transition ───────────────────────────────────────────────
+   Applied by components/common/PageTransition via a route template, so it
+   replays on every navigation. Only opacity and transform are animated, which
+   keeps the work on the compositor — the same reason it is safe to run on
+   mobile where framer-motion is switched off.
+
+   `will-change` is deliberately NOT set: the element animates once on mount
+   and then never again, so promoting it to its own layer for the life of the
+   page would cost memory for nothing. */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.page-enter {
+  animation: pageEnter 0.32s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+/* Someone who has asked their OS for less motion gets the content, not the
+   movement. The content must still END visible, hence the explicit reset
+   rather than simply dropping the animation. */
+@media (prefers-reduced-motion: reduce) {
+  .page-enter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Skeleton rhythm ───────────────────────────────────────────────
+   Loading placeholders share one animation-delay scale so a grid of them
+   pulses as a group rather than each tile keeping its own time — which is
+   what made loading screens read as noise. */
+.skeleton-stagger > * { animation-delay: calc(var(--i, 0) * 60ms); }

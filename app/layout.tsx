@@ -3,6 +3,8 @@ import { Toaster } from 'react-hot-toast';
 import ThemeProvider from '../providers/ThemeProvider';
 import ReduxProvider from '../providers/ReduxProvider';
 import QueryProvider from '../providers/QueryProvider';
+import { Suspense } from 'react';
+import NavigationProgress from '../components/common/NavigationProgress';
 import { SITE_NAME, SITE_URL, API_URL } from '../constants';
 
 /**
@@ -77,6 +79,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ReduxProvider>
           <QueryProvider>
             <ThemeProvider>
+              {/* Suspense because it reads useSearchParams, which opts its
+                  subtree into client rendering — without the boundary that
+                  would deopt every static page in the app. */}
+              <Suspense fallback={null}>
+                <NavigationProgress />
+              </Suspense>
               {children}
               <Toaster
                 position="top-right"
