@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -15,12 +15,13 @@ import { motion } from 'framer-motion';
 import type { Product, ProductVariant } from '../../types';
 import { formatPrice, getDiscountPercent } from '../../utils/format';
 import { useCart } from '../../hooks/useCart';
-import { wishlistApi } from '../../services/api.service';
+import { wishlistApi, productApi } from '../../services/api.service';
 import { useAppSelector } from '../../store';
 import toast from 'react-hot-toast';
 import ProductSection from '../home/ProductSection';
 import OptionBox from './OptionBox';
 import { galleryFor } from '../../lib/productImages';
+import { getRecentlyViewed, recordView } from '../../lib/recentlyViewed';
 
 interface Props {
   product: Product;
@@ -71,6 +72,59 @@ export default function ProductDetailClient({ product }: Props) {
   };
 
   /**
+   * Curated related products where an admin has picked them, otherwise the
+   * automatic same-category suggestions the API now returns. Nothing in this
+   * catalogue is curated yet, which is why the section never appeared.
+   */
+  const relatedProducts: any[] = useMemo(() => {
+    const curated = (product as any).relatedProducts ?? [];
+    if (curated.length) return curated.map((rp: any) => rp.relatedProduct).filter(Boolean);
+    return (product as any).suggestedProducts ?? [];
+  }, [product]);
+
+  const [featured, setFeatured] = useState<any[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
+
+  // Read on mount, before this visit is recorded, so the current product does
+  // not immediately appear in its own "recently viewed" row.
+  useEffect(() => {
+    setRecentlyViewed(
+      getRecentlyViewed(product.slug).map(v => ({
+        id: v.id,
+        slug: v.slug,
+        name: v.name,
+        basePrice: v.basePrice,
+        salePrice: v.salePrice,
+        images: v.image ? [{ url: v.image }] : [],
+        variants: [],
+      }))
+    );
+
+    recordView({
+      id: product.id,
+      slug: product.slug,
+      name: product.name,
+      image: product.images?.[0]?.url ?? null,
+      basePrice: Number(product.basePrice),
+      salePrice: product.salePrice != null ? Number(product.salePrice) : null,
+    });
+  }, [product.id, product.slug, product.name, product.basePrice, product.salePrice, product.images]);
+
+  // Fetched rather than server-rendered: it is below the fold and must not
+  // delay the part of the page the shopper came for.
+  useEffect(() => {
+    let cancelled = false;
+    productApi.getFeatured({ limit: 10 })
+      .then(({ data }) => {
+        if (cancelled) return;
+        const list = ((data as any)?.data || []).filter((p: any) => p.id !== product.id);
+        setFeatured(list);
+      })
+      .catch(() => { if (!cancelled) setFeatured([]); });
+    return () => { cancelled = true; };
+  }, [product.id]);
+
+  /**
    * The shots for the chosen colour, falling back to the default set — see
    * galleryFor. Derived rather than stored so it can never drift out of step
    * with the selection.
@@ -88,6 +142,20 @@ export default function ProductDetailClient({ product }: Props) {
     const variant = product.variants?.find((v) => v.color === color && (selectedSize ? v.size === selectedSize : true));
     setSelectedVariant(variant || null);
   };
+
+  /**
+   * Remaining stock worth mentioning, or null.
+   *
+   * Only ever the true figure for the variant in hand, and only once it is low
+   * enough to matter — a "5 left" on a line carrying 200 is noise, and anything
+   * invented here would be a lie printed on the customer's screen.
+   */
+  const LOW_STOCK_AT = 5;
+  const lowStockLeft: number | null = useMemo(() => {
+    const stock = selectedVariant?.stockQuantity;
+    if (typeof stock !== 'number' || stock <= 0 || stock > LOW_STOCK_AT) return null;
+    return stock;
+  }, [selectedVariant]);
 
   const handleAddToCart = async () => {
     if (uniqueSizes.length > 0 && !selectedSize) {
@@ -295,6 +363,22 @@ export default function ProductDetailClient({ product }: Props) {
                 </Box>
               )}
 
+              {/* Genuine scarcity only.
+                  This is the real remaining stock of the variant the shopper
+                  has actually selected — no invented "3 people are viewing
+                  this" counters, which would be a lie told to their customers.
+                  It says nothing at all until a selection makes it true. */}
+              {lowStockLeft !== null && (
+                <Typography
+                  sx={{
+                    mb: 2, fontSize: '0.8rem', fontWeight: 700,
+                    color: '#c0392b', letterSpacing: '0.02em',
+                  }}
+                >
+                  Only {lowStockLeft} left{selectedSize ? ` in size ${selectedSize}` : ''}
+                </Typography>
+              )}
+
               {/* Actions */}
               <Stack direction="row" spacing={1.5} sx={{ mb: 3 }}>
                 <Button
@@ -382,13 +466,42 @@ export default function ProductDetailClient({ product }: Props) {
           </Grid>
         </Grid>
 
-        {/* Related products */}
-        {(product.relatedProducts?.length ?? 0) > 0 && (
+        {/* ── Keep browsing ────────────────────────────────────────
+            The bottom of a product page is where a shopper either carries on
+            or leaves. It used to end here whenever nobody had hand-picked
+            related products — which was every product — so each of these rows
+            renders only when it genuinely has something to show. */}
+
+        {relatedProducts.length > 0 && (
           <Box sx={{ mt: 10 }}>
             <ProductSection
               title="You May Also Like"
-              subtitle="Recommended"
-              products={(product.relatedProducts ?? []).map((rp: any) => rp.relatedProduct)}
+              subtitle={product.category?.name ? `More from ${product.category.name.trim()}` : 'Recommended'}
+              products={relatedProducts}
+              viewAllLink={product.category?.slug ? `/category/${product.category.slug}` : undefined}
+            />
+          </Box>
+        )}
+
+        {featured.length > 0 && (
+          <Box sx={{ mt: { xs: 6, md: 8 } }}>
+            <ProductSection
+              title="Featured Picks"
+              subtitle="Handpicked by our stylists"
+              products={featured}
+              viewAllLink="/shop?isFeatured=true"
+            />
+          </Box>
+        )}
+
+        {/* The visitor's own history — most useful when comparing two items,
+            which is the usual reason for leaving a product page and returning. */}
+        {recentlyViewed.length > 0 && (
+          <Box sx={{ mt: { xs: 6, md: 8 } }}>
+            <ProductSection
+              title="Recently Viewed"
+              subtitle="Pick up where you left off"
+              products={recentlyViewed as any}
             />
           </Box>
         )}
