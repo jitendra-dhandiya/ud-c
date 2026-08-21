@@ -11,8 +11,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
-import { Box, Typography, IconButton, Chip, Button } from '@mui/material';
-import { Delete, CloudUpload, DragIndicator } from '@mui/icons-material';
+import { Box, Typography, IconButton, Chip, Button, Menu, MenuItem } from '@mui/material';
+import { Delete, CloudUpload, DragIndicator, Palette, Check } from '@mui/icons-material';
 import { useImageCropperBatch } from '../common/ImageCropperProvider';
 
 export interface SortableImage {
@@ -30,14 +30,32 @@ interface Props {
   onAdd: (files: File[]) => void;
   /** Rendered under the grid; falls back to the standard hint. */
   helperText?: string;
+  /**
+   * Colour names from the product's variants. Empty hides the whole colour
+   * control — a product with one colour has nothing to assign, and an empty
+   * dropdown would only raise questions.
+   */
+  colorOptions?: string[];
+  /** Current assignment per grid key; a missing or null entry means "default". */
+  colorByKey?: Record<string, string | null>;
+  onColorChange?: (key: string, color: string | null) => void;
 }
+
+/** Shown for an image that belongs to no particular colour. */
+const DEFAULT_LABEL = 'All colours';
 
 const TILE_W = 96;
 const TILE_H = 128;
 
-function SortableTile({ image, index, onRemove }: {
-  image: SortableImage; index: number; onRemove: (key: string) => void;
+function SortableTile({ image, index, onRemove, colorOptions, color, onColorChange }: {
+  image: SortableImage;
+  index: number;
+  onRemove: (key: string) => void;
+  colorOptions: string[];
+  color: string | null;
+  onColorChange?: (key: string, color: string | null) => void;
 }) {
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: image.key });
 
@@ -121,12 +139,66 @@ function SortableTile({ image, index, onRemove }: {
       >
         <Delete sx={{ fontSize: 14 }} />
       </IconButton>
+
+      {/* Colour assignment. Deliberately below the image and outside the drag
+          listeners, so opening it never starts a drag. */}
+      {colorOptions.length > 0 && (
+        <>
+          <Box
+            onClick={(e) => setMenuAnchor(e.currentTarget)}
+            title={color ? `Shown when "${color}" is selected` : 'Shown when the chosen colour has no images of its own'}
+            sx={{
+              mt: 0.5, px: 0.5, py: 0.25,
+              display: 'flex', alignItems: 'center', gap: 0.25,
+              border: '1px solid', borderColor: color ? '#1a1a1a' : '#e0e0e0',
+              borderRadius: 0.5, cursor: 'pointer',
+              bgcolor: color ? '#1a1a1a' : 'transparent',
+              color: color ? '#fff' : '#777',
+              '&:hover': { borderColor: '#1a1a1a' },
+            }}
+          >
+            <Palette sx={{ fontSize: 12, flexShrink: 0 }} />
+            <Typography sx={{
+              fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.02em',
+              textTransform: 'capitalize', whiteSpace: 'nowrap',
+              overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>
+              {color || DEFAULT_LABEL}
+            </Typography>
+          </Box>
+
+          <Menu
+            anchorEl={menuAnchor}
+            open={Boolean(menuAnchor)}
+            onClose={() => setMenuAnchor(null)}
+          >
+            <MenuItem
+              onClick={() => { onColorChange?.(image.key, null); setMenuAnchor(null); }}
+              sx={{ fontSize: '0.8rem' }}
+            >
+              {!color && <Check sx={{ fontSize: 14, mr: 0.75 }} />}
+              <Box component="span" sx={{ ml: color ? '22px' : 0 }}>{DEFAULT_LABEL}</Box>
+            </MenuItem>
+            {colorOptions.map((option) => (
+              <MenuItem
+                key={option}
+                onClick={() => { onColorChange?.(image.key, option); setMenuAnchor(null); }}
+                sx={{ fontSize: '0.8rem', textTransform: 'capitalize' }}
+              >
+                {color === option && <Check sx={{ fontSize: 14, mr: 0.75 }} />}
+                <Box component="span" sx={{ ml: color === option ? 0 : '22px' }}>{option}</Box>
+              </MenuItem>
+            ))}
+          </Menu>
+        </>
+      )}
     </Box>
   );
 }
 
 export default function SortableImageGrid({
   images, onReorder, onRemove, onAdd, helperText,
+  colorOptions = [], colorByKey = {}, onColorChange,
 }: Props) {
   const cropImages = useImageCropperBatch();
   const [activeKey, setActiveKey] = useState<string | null>(null);
@@ -162,7 +234,15 @@ export default function SortableImageGrid({
         <SortableContext items={images.map(i => i.key)} strategy={rectSortingStrategy}>
           <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 2 }}>
             {images.map((image, index) => (
-              <SortableTile key={image.key} image={image} index={index} onRemove={onRemove} />
+              <SortableTile
+                key={image.key}
+                image={image}
+                index={index}
+                onRemove={onRemove}
+                colorOptions={colorOptions}
+                color={colorByKey[image.key] ?? null}
+                onColorChange={onColorChange}
+              />
             ))}
 
             <Button component="label" variant="outlined" sx={{

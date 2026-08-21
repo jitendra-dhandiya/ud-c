@@ -49,6 +49,8 @@ export interface ProductImage {
   id: string;
   url: string;
   altText?: string;
+  /** Colour this shot is of; null means it is part of the default set. */
+  color?: string | null;
   isPrimary: boolean;
   sortOrder: number;
 }

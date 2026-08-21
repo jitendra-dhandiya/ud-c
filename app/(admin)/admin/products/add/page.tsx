@@ -42,6 +42,12 @@ export default function AddProductPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [collections, setCollections] = useState<any[]>([]);
   const [images, setImages] = useState<File[]>([]);
+  /**
+   * Colour tag per picked file, held as a parallel array rather than a map.
+   * The grid reorders the files themselves on this form, so any key built from
+   * an index would point at the wrong photo the moment something is dragged.
+   */
+  const [imageColors, setImageColors] = useState<(string | null)[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
 
@@ -113,6 +119,13 @@ export default function AddProductPage() {
         if (values.codShippingCharge !== '') fd.append('codShippingCharge', String(values.codShippingCharge));
         if (values.expressShippingCharge !== '') fd.append('expressShippingCharge', String(values.expressShippingCharge));
         images.forEach(img => fd.append('images', img));
+        // Keyed by upload position, which is exactly how the server names them.
+        fd.append(
+          'imageColors',
+          JSON.stringify(
+            Object.fromEntries(images.map((_, i) => [`new:${i}`, imageColors[i] || null]))
+          )
+        );
 
         await productApi.create(fd);
         toast.success('Product created!');
@@ -144,12 +157,14 @@ export default function AddProductPage() {
     if (!files.length) return;
     setImages(prev => [...prev, ...files]);
     setImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
+    setImageColors(prev => [...prev, ...files.map(() => null)]);
   };
 
   const removeImage = (key: string) => {
     const i = Number(key.slice(4));
     setImages(prev => prev.filter((_, idx) => idx !== i));
     setImagePreviews(prev => prev.filter((_, idx) => idx !== i));
+    setImageColors(prev => prev.filter((_, idx) => idx !== i));
   };
 
   // On create the backend assigns sortOrder from the upload index, so putting
@@ -163,7 +178,20 @@ export default function AddProductPage() {
     const order = next.map(item => Number(item.key.slice(4)));
     setImages(prev => order.map(i => prev[i]));
     setImagePreviews(prev => order.map(i => prev[i]));
+    setImageColors(prev => order.map(i => prev[i] ?? null));
   };
+
+  /** Colour names entered in the Variants section below, in entry order. */
+  const variantColorNames = useMemo(
+    () => [
+      ...new Set(
+        (formik.values.variants || [])
+          .map((v: any) => (v.color || '').trim())
+          .filter(Boolean)
+      ),
+    ] as string[],
+    [formik.values.variants]
+  );
 
   const addTag = () => {
     const tag = tagInput.trim();
@@ -261,7 +289,19 @@ export default function AddProductPage() {
                     onReorder={reorderImages}
                     onRemove={removeImage}
                     onAdd={handleImages}
-                    helperText="Drag to reorder — image 1 is the cover shown on listings and first in the gallery. Images are auto-optimized."
+                    colorOptions={variantColorNames}
+                    colorByKey={Object.fromEntries(
+                      imageColors.map((c, i) => [`new:${i}`, c])
+                    )}
+                    onColorChange={(key, color) => {
+                      const i = Number(key.slice(4));
+                      setImageColors(prev => prev.map((c, idx) => (idx === i ? color : c)));
+                    }}
+                    helperText={
+                      variantColorNames.length
+                        ? 'Drag to reorder — image 1 is the cover. Tag a photo with a colour to show it when that colour is picked; leave it on "All colours" and it shows for every colour that has no photos of its own.'
+                        : 'Drag to reorder — image 1 is the cover shown on listings and first in the gallery. Add colours under Variants to tag photos per colour.'
+                    }
                   />
                 </CardContent>
               </Card>

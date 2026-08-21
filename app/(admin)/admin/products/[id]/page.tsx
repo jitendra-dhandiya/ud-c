@@ -42,6 +42,9 @@ export default function EditProductPage() {
   const [removedImageIds, setRemovedImageIds] = useState<string[]>([]);
   // Ordered grid keys: existing image ids and `new:<n>` upload placeholders.
   const [imageOrder, setImageOrder] = useState<string[]>([]);
+  // Colour tag per grid key. Keyed, not positional, because this form never
+  // moves the underlying arrays — only the order of the keys.
+  const [imageColors, setImageColors] = useState<Record<string, string | null>>({});
   const [tagInput, setTagInput] = useState('');
 
   // Variant CRUD state
@@ -64,6 +67,9 @@ export default function EditProductPage() {
         setVariants(p?.variants || []);
         // Server returns images already sorted by position.
         setImageOrder((p?.images || []).map((img: any) => img.id));
+        setImageColors(
+          Object.fromEntries((p?.images || []).map((img: any) => [img.id, img.color ?? null]))
+        );
       })
       .catch(() => setLoadError('Product not found'));
   }, [id]);
@@ -148,6 +154,19 @@ export default function EditProductPage() {
         fd.append(
           'imageOrder',
           JSON.stringify(imageOrder.map(k => tokenRemap.get(k) ?? k)),
+        );
+
+        // Same remap: a pending file's token shifts when an earlier pending
+        // file was removed, and its colour has to travel with it.
+        fd.append(
+          'imageColors',
+          JSON.stringify(
+            Object.fromEntries(
+              Object.entries(imageColors)
+                .filter(([key]) => imageOrder.includes(key))
+                .map(([key, color]) => [tokenRemap.get(key) ?? key, color])
+            )
+          ),
         );
 
         await productApi.update(id, fd);
@@ -280,6 +299,13 @@ export default function EditProductPage() {
       </Box>
     );
   }
+
+  /** Colours this product actually has variants for. */
+  const variantColorNames: string[] = [
+    ...new Set(
+      (variants || []).map((v: any) => (v.color || '').trim()).filter(Boolean)
+    ),
+  ] as string[];
 
   const visibleExistingImages = product.images?.filter((img: any) => !removedImageIds.includes(img.id)) || [];
   const pendingCount = newPreviews.filter(Boolean).length;
@@ -435,6 +461,16 @@ export default function EditProductPage() {
                     onReorder={(next) => setImageOrder(next.map(i => i.key))}
                     onRemove={removeImage}
                     onAdd={handleNewImages}
+                    colorOptions={variantColorNames}
+                    colorByKey={imageColors}
+                    onColorChange={(key, color) =>
+                      setImageColors(prev => ({ ...prev, [key]: color }))
+                    }
+                    helperText={
+                      variantColorNames.length
+                        ? 'Drag to reorder — image 1 is the cover. Tag a photo with a colour to show it when that colour is picked; leave it on "All colours" and it shows for every colour that has no photos of its own.'
+                        : 'Drag to reorder — image 1 is the cover. Add colour variants below to tag photos per colour.'
+                    }
                   />
                 </CardContent>
               </Card>

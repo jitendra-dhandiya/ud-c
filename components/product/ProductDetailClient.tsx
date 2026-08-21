@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -20,6 +20,7 @@ import { useAppSelector } from '../../store';
 import toast from 'react-hot-toast';
 import ProductSection from '../home/ProductSection';
 import OptionBox from './OptionBox';
+import { galleryFor } from '../../lib/productImages';
 
 interface Props {
   product: Product;
@@ -69,8 +70,21 @@ export default function ProductDetailClient({ product }: Props) {
     setSelectedVariant(variant || null);
   };
 
+  /**
+   * The shots for the chosen colour, falling back to the default set — see
+   * galleryFor. Derived rather than stored so it can never drift out of step
+   * with the selection.
+   */
+  const gallery = useMemo(
+    () => galleryFor(product.images as any[], selectedColor),
+    [product.images, selectedColor]
+  );
+
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
+    // The gallery it points into is about to change; index 3 of the old set
+    // means nothing in the new one, and may not even exist.
+    setSelectedImage(0);
     const variant = product.variants?.find((v) => v.color === color && (selectedSize ? v.size === selectedSize : true));
     setSelectedVariant(variant || null);
   };
@@ -120,7 +134,7 @@ export default function ProductDetailClient({ product }: Props) {
                   overflow: 'hidden', bgcolor: '#f8f8f8', mb: 1.5,
                 }}
               >
-                {product.images?.[selectedImage]?.url && (
+                {gallery[selectedImage]?.url && (
                   <motion.div
                     key={selectedImage}
                     initial={{ opacity: 0.5, scale: 1.02 }}
@@ -129,8 +143,8 @@ export default function ProductDetailClient({ product }: Props) {
                     style={{ position: 'absolute', inset: 0 }}
                   >
                     <Image
-                      src={product.images[selectedImage].url}
-                      alt={product.images[selectedImage].altText || product.name}
+                      src={gallery[selectedImage].url}
+                      alt={gallery[selectedImage].altText || product.name}
                       fill
                       style={{ objectFit: 'cover' }}
                       priority
@@ -148,9 +162,9 @@ export default function ProductDetailClient({ product }: Props) {
               </Box>
 
               {/* Thumbnails */}
-              {product.images?.length > 1 && (
+              {gallery.length > 1 && (
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  {product.images.map((img, i) => (
+                  {gallery.map((img, i) => (
                     <Box
                       key={img.id}
                       onClick={() => setSelectedImage(i)}
