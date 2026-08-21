@@ -62,6 +62,11 @@ export const CROP_PRESETS = {
   product:       { aspect: 3 / 4,       minWidth: 1000, maxBytes: DEFAULT_MAX_BYTES, label: 'Product photo',   hint: 'Product tiles are 3:4 portrait.' },
   category:      { aspect: 4 / 5,       minWidth: 800,  maxBytes: DEFAULT_MAX_BYTES, label: 'Category card',   hint: 'Category cards are 4:5 portrait.' },
   collection:    { aspect: 4 / 3,       minWidth: 800,  maxBytes: DEFAULT_MAX_BYTES, label: 'Collection card' },
+  // The collection page hero is a wide strip (1400x320 on desktop). Cropping
+  // to 3:1 rather than the box's own 4.4:1 leaves a little room top and bottom,
+  // which is what stops a phone — where the same box is far squarer — from
+  // slicing the subject out of the sides.
+  collectionBanner: { aspect: 3,        minWidth: 1440, maxBytes: DEFAULT_MAX_BYTES, label: 'Collection banner', hint: 'Wide artwork behind the collection title.' },
   bannerDesktop: { aspect: 1440 / 560,  minWidth: 1440, maxBytes: DEFAULT_MAX_BYTES, label: 'Desktop hero', hint: 'Wide 2.57:1 — keep any text well inside the frame.' },
   bannerMobile:  { aspect: 4 / 5,       minWidth: 800,  maxBytes: DEFAULT_MAX_BYTES, label: 'Mobile hero',  hint: 'Portrait art for phones.' },
   reelPoster:    { aspect: 9 / 16,      minWidth: 720,  maxBytes: DEFAULT_MAX_BYTES, label: 'Reel poster',  hint: 'Reels are vertical 9:16.' },

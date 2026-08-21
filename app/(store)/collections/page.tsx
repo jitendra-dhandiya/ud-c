@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import { ArrowForward } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { collectionApi } from '../../../services/api.service';
+import { collectionApi, bannerApi } from '../../../services/api.service';
 
 interface Collection {
   id: string;
@@ -35,12 +35,22 @@ function CollectionCardSkeleton() {
 export default function CollectionsPage() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
+  /**
+   * Artwork behind the page title, uploaded in Admin → Banners as a banner of
+   * type COLLECTION. Nothing uploaded means the dark block below stays exactly
+   * as it is, so this can never leave the page looking unfinished.
+   */
+  const [heroBanner, setHeroBanner] = useState<any | null>(null);
 
   useEffect(() => {
     collectionApi.getAll({ limit: 50, sortBy: 'sortOrder' })
       .then(({ data }) => setCollections((data as any).data || []))
       .catch(() => setCollections([]))
       .finally(() => setLoading(false));
+
+    bannerApi.getByType('collection')
+      .then(({ data }) => setHeroBanner((data as any)?.data?.[0] || null))
+      .catch(() => setHeroBanner(null));
   }, []);
 
   const featured = collections.filter(c => c.isFeatured);
@@ -59,13 +69,35 @@ export default function CollectionsPage() {
           overflow: 'hidden',
         }}
       >
-        <Box
-          sx={{
-            position: 'absolute', inset: 0, opacity: 0.06,
-            backgroundImage: 'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)',
-            backgroundSize: '12px 12px',
-          }}
-        />
+        {heroBanner?.image ? (
+          <>
+            <Box
+              component="img"
+              src={heroBanner.image}
+              alt=""
+              aria-hidden
+              sx={{
+                position: 'absolute', inset: 0,
+                width: '100%', height: '100%',
+                objectFit: 'cover', objectPosition: 'center 40%',
+              }}
+            />
+            {/* The type sits on top of an unknown photograph, so the scrim is
+                what keeps it readable rather than a matter of taste. */}
+            <Box sx={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.68) 100%)',
+            }} />
+          </>
+        ) : (
+          <Box
+            sx={{
+              position: 'absolute', inset: 0, opacity: 0.06,
+              backgroundImage: 'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)',
+              backgroundSize: '12px 12px',
+            }}
+          />
+        )}
         <Container maxWidth="md" sx={{ position: 'relative' }}>
           <Typography
             variant="overline"
@@ -73,14 +105,17 @@ export default function CollectionsPage() {
           >
             Curated For You
           </Typography>
+          {/* The banner's own title and subtitle win when it carries them, so
+              the page can be re-themed for a season without a deploy. */}
           <Typography
             variant="h3"
             sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 700, mb: 2 }}
           >
-            Our Collections
+            {heroBanner?.title || 'Our Collections'}
           </Typography>
-          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.7)', maxWidth: 480, mx: 'auto' }}>
-            Explore our carefully curated collections — each one a story told through fabric, colour, and style.
+          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.8)', maxWidth: 480, mx: 'auto' }}>
+            {heroBanner?.subtitle
+              || 'Explore our carefully curated collections — each one a story told through fabric, colour, and style.'}
           </Typography>
         </Container>
       </Box>

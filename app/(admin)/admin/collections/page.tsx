@@ -250,6 +250,11 @@ export default function CollectionsPage() {
   const [editCol, setEditCol] = useState<any>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
+  // The wide artwork behind the collection title on the storefront. Separate
+  // from the card image: one is a 4:3 tile in a grid, the other a 3:1 strip.
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState('');
+  const [bannerCleared, setBannerCleared] = useState(false);
   const [manageCol, setManageCol] = useState<any>(null);
 
   const fetchCollections = useCallback(() => {
@@ -275,6 +280,9 @@ export default function CollectionsPage() {
         const fd = new FormData();
         Object.entries(values).forEach(([k, v]) => fd.append(k, String(v)));
         if (imageFile) fd.append('image', imageFile);
+        if (bannerFile) fd.append('bannerImage', bannerFile);
+        // An explicit empty value is how the server is told to clear it.
+        else if (bannerCleared) fd.append('bannerImage', '');
         if (editCol) {
           await collectionApi.update(editCol.id, fd);
           toast.success('Collection updated');
@@ -294,10 +302,12 @@ export default function CollectionsPage() {
 
   const openCreate = () => {
     setEditCol(null); setImageFile(null); setImagePreview('');
+    setBannerFile(null); setBannerPreview(''); setBannerCleared(false);
     formik.resetForm(); setDialogOpen(true);
   };
   const openEdit = (c: any) => {
     setEditCol(c); setImagePreview(c.image || ''); setImageFile(null);
+    setBannerPreview(c.bannerImage || ''); setBannerFile(null); setBannerCleared(false);
     formik.setValues({ name: c.name, description: c.description || '', isActive: c.isActive ?? true, isFeatured: c.isFeatured ?? false });
     setDialogOpen(true);
   };
@@ -397,7 +407,51 @@ export default function CollectionsPage() {
                   if (cropped) { setImageFile(cropped); setImagePreview(URL.createObjectURL(cropped)); }
                 }} />
               </Button>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                The card shown in the collections grid. 4:3.
+              </Typography>
             </Box>
+
+            {/* Wide hero artwork */}
+            <Box>
+              <Typography variant="caption" fontWeight={700} sx={{ display: 'block', mb: 0.75, color: 'text.secondary' }}>
+                COLLECTION PAGE BANNER
+              </Typography>
+              {bannerPreview && (
+                <Box component="img" src={bannerPreview}
+                  sx={{ width: '100%', height: 90, objectFit: 'cover', borderRadius: 1, mb: 1 }} />
+              )}
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button variant="outlined" component="label" size="small">
+                  {bannerPreview ? 'Change Banner' : 'Upload Banner'}
+                  <input type="file" hidden accept="image/*" onChange={async e => {
+                    const f = e.target.files?.[0];
+                    e.target.value = '';
+                    if (!f) return;
+                    const cropped = await cropImage(f, 'collectionBanner');
+                    if (cropped) {
+                      setBannerFile(cropped);
+                      setBannerPreview(URL.createObjectURL(cropped));
+                      setBannerCleared(false);
+                    }
+                  }} />
+                </Button>
+                {bannerPreview && (
+                  <Button
+                    size="small"
+                    onClick={() => { setBannerFile(null); setBannerPreview(''); setBannerCleared(true); }}
+                    sx={{ color: '#d32f2f' }}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                Sits behind the collection title. Without one the card image is used, and without
+                that the plain dark header — so this is optional.
+              </Typography>
+            </Box>
+
             <TextField label="Name" size="small" fullWidth required
               {...formik.getFieldProps('name')}
               error={formik.touched.name && !!formik.errors.name}

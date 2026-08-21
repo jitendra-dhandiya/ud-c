@@ -25,6 +25,10 @@ export default function CollectionPageClient({ collection }: { collection: any }
   const [sort, setSort] = useState('createdAt:desc');
   const limit = 24;
 
+  /** Banner first, card image next, dark block last. */
+  const heroImage: string | undefined =
+    collection.bannerImage || collection.image || undefined;
+
   const fetchProducts = useCallback(() => {
     setLoading(true);
     const [sortBy, sortOrder] = sort.split(':');
@@ -42,18 +46,29 @@ export default function CollectionPageClient({ collection }: { collection: any }
         <Typography variant="body2" color="text.primary" fontWeight={600}>{collection.name}</Typography>
       </Breadcrumbs>
 
-      {/* Collection hero */}
+      {/* Collection hero.
+          The banner is the wide shot uploaded for this spot; the card image is
+          the fallback, and a plain dark block is the last resort — so a
+          collection without artwork looks exactly as it did before.
+
+          This used to read `collection.imageUrl`, a field the API has never
+          returned, so the background silently never rendered and every
+          collection showed the black block. */}
       <Box sx={{
         position: 'relative', height: { xs: 220, md: 320 }, borderRadius: 3, overflow: 'hidden', mb: 4,
-        bgcolor: collection.imageUrl ? 'transparent' : '#1a1a1a',
+        bgcolor: heroImage ? 'transparent' : '#1a1a1a',
       }}>
-        {collection.imageUrl && (
-          <Box component="img" src={collection.imageUrl} alt={collection.name}
-            sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {heroImage && (
+          <Box component="img" src={heroImage} alt={collection.name}
+            sx={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }} />
         )}
         <Box sx={{
           position: 'absolute', inset: 0,
-          background: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 100%)',
+          // Heavier over artwork than over the plain block: white type on an
+          // unknown photograph needs the contrast, a flat colour does not.
+          background: heroImage
+            ? 'linear-gradient(90deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.25) 100%)'
+            : 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 100%)',
           display: 'flex', flexDirection: 'column', justifyContent: 'center', pl: { xs: 3, md: 6 },
         }}>
           <Typography variant="overline" sx={{ color: '#c9a84c', letterSpacing: '0.15em', fontWeight: 700 }}>

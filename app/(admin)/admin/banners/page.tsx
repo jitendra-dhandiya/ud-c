@@ -14,7 +14,24 @@ import { formatDate } from '../../../../utils/format';
 import { toast } from 'react-hot-toast';
 import { useImageCropper } from '../../../../components/common/ImageCropperProvider';
 
-const BANNER_TYPES = ['HERO', 'PROMOTIONAL', 'CATEGORY', 'ANNOUNCEMENT', 'POPUP'];
+/**
+ * Exactly the BannerType enum, no more and no less.
+ *
+ * The list previously offered POPUP, which is not a value the database accepts
+ * — saving one failed — while omitting COLLECTION and OFFER, which it does.
+ * COLLECTION is what the /collections page header reads.
+ */
+const BANNER_TYPES = ['HERO', 'PROMOTIONAL', 'COLLECTION', 'CATEGORY', 'OFFER', 'ANNOUNCEMENT'];
+
+/** What each type actually drives, so the choice is not guesswork. */
+const TYPE_HINTS: Record<string, string> = {
+  HERO: 'The homepage slider.',
+  PROMOTIONAL: 'The promo strip on the homepage.',
+  COLLECTION: 'The header artwork on the /collections page.',
+  CATEGORY: 'Category page artwork.',
+  OFFER: 'Offer placements.',
+  ANNOUNCEMENT: 'Announcement placements.',
+};
 const PAGE_SIZE = 12;
 
 const schema = Yup.object({
@@ -287,7 +304,10 @@ export default function BannersPage() {
               error={formik.touched.title && !!formik.errors.title}
               helperText={formik.touched.title && formik.errors.title} />
             <TextField label="Subtitle" size="small" fullWidth {...formik.getFieldProps('subtitle')} />
-            <TextField select label="Type" size="small" fullWidth {...formik.getFieldProps('type')}>
+            <TextField
+              select label="Type" size="small" fullWidth {...formik.getFieldProps('type')}
+              helperText={TYPE_HINTS[formik.values.type] || 'Where this banner appears.'}
+            >
               {BANNER_TYPES.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
             </TextField>
             <TextField select label="Target Gender" size="small" fullWidth {...formik.getFieldProps('gender')}
