@@ -19,6 +19,7 @@ import { wishlistApi } from '../../services/api.service';
 import { useAppSelector } from '../../store';
 import toast from 'react-hot-toast';
 import ProductSection from '../home/ProductSection';
+import OptionBox from './OptionBox';
 
 interface Props {
   product: Product;
@@ -224,20 +225,21 @@ export default function ProductDetailClient({ product }: Props) {
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     {uniqueColors.map((color) => {
-                      const variant = product.variants?.find((v) => v.color === color);
+                      // A colour with nothing left in any size is a dead end —
+                      // the size row already reads that way, so the colour row
+                      // now matches rather than letting the customer pick a
+                      // colour and find every size greyed out.
+                      const soldOut = !product.variants?.some(
+                        (v) => v.color === color && (v.stockQuantity ?? 0) > 0
+                      );
                       return (
-                        <Box
+                        <OptionBox
                           key={color}
+                          label={color as string}
+                          wide
+                          selected={selectedColor === color}
+                          disabled={soldOut}
                           onClick={() => color && handleColorSelect(color)}
-                          title={color}
-                          sx={{
-                            width: 32, height: 32, borderRadius: '50%', cursor: 'pointer',
-                            bgcolor: variant?.colorHex || '#ccc',
-                            border: '3px solid', borderColor: selectedColor === color ? '#1a1a1a' : 'transparent',
-                            boxShadow: '0 0 0 1.5px rgba(0,0,0,0.15)',
-                            transition: 'all 0.2s',
-                            '&:hover': { transform: 'scale(1.15)' },
-                          }}
                         />
                       );
                     })}
@@ -266,24 +268,13 @@ export default function ProductDetailClient({ product }: Props) {
                       );
                       const outOfStock = (variant?.stockQuantity ?? 0) === 0;
                       return (
-                        <Box
+                        <OptionBox
                           key={size}
-                          onClick={() => !outOfStock && size && handleSizeSelect(size)}
-                          sx={{
-                            minWidth: 44, height: 44, display: 'flex', alignItems: 'center',
-                            justifyContent: 'center', border: '1.5px solid',
-                            borderColor: selectedSize === size ? '#1a1a1a' : '#e0e0e0',
-                            borderRadius: 1, cursor: outOfStock ? 'not-allowed' : 'pointer',
-                            opacity: outOfStock ? 0.4 : 1,
-                            fontWeight: 600, fontSize: '0.8rem', px: 1.5,
-                            bgcolor: selectedSize === size ? '#1a1a1a' : 'transparent',
-                            color: selectedSize === size ? 'white' : 'inherit',
-                            transition: 'all 0.2s',
-                            '&:hover': outOfStock ? {} : { borderColor: '#1a1a1a' },
-                          }}
-                        >
-                          {size}
-                        </Box>
+                          label={size as string}
+                          selected={selectedSize === size}
+                          disabled={outOfStock}
+                          onClick={() => size && handleSizeSelect(size)}
+                        />
                       );
                     })}
                   </Box>

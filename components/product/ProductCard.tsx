@@ -210,22 +210,39 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
           {product.name}
         </Typography>
 
-        {/* Color swatches */}
-        {product.variants?.length > 0 && (
-          <Box sx={{ display: 'flex', gap: 0.5, mb: 0.6, flexWrap: 'wrap' }}>
-            {[...new Set(product.variants.map((v) => v.color).filter(Boolean))].slice(0, 4).map((color) => (
-              <Box
-                key={color}
-                title={color}
-                sx={{
-                  width: 13, height: 13, borderRadius: '50%',
-                  bgcolor: product.variants.find((v) => v.color === color)?.colorHex || '#ccc',
-                  border: '1.5px solid rgba(0,0,0,0.12)',
-                }}
-              />
-            ))}
-          </Box>
-        )}
+        {/* Colours, named. Two dots of the same derived hex told the customer
+            nothing; two names tell them what the product actually comes in. */}
+        {(() => {
+          const colors = [...new Set(product.variants?.map((v) => v.color).filter(Boolean) || [])];
+          if (!colors.length) return null;
+          // Two names is what fits a tile without pushing the price out of
+          // view; the rest are summarised.
+          const shown = colors.slice(0, 2);
+          const extra = colors.length - shown.length;
+          return (
+            <Box sx={{ display: 'flex', gap: 0.5, mb: 0.6, flexWrap: 'wrap', alignItems: 'center' }}>
+              {shown.map((color) => (
+                <Box
+                  key={color}
+                  sx={{
+                    px: 0.75, height: 19, display: 'inline-flex', alignItems: 'center',
+                    border: '1px solid #e2e2e2', borderRadius: 0.5,
+                    fontSize: '0.62rem', fontWeight: 600, letterSpacing: '0.03em',
+                    color: '#555', textTransform: 'capitalize', whiteSpace: 'nowrap',
+                    maxWidth: 92, overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}
+                >
+                  {color}
+                </Box>
+              ))}
+              {extra > 0 && (
+                <Box sx={{ fontSize: '0.62rem', fontWeight: 600, color: '#999', letterSpacing: '0.03em' }}>
+                  +{extra}
+                </Box>
+              )}
+            </Box>
+          );
+        })()}
 
         {/* Rating */}
         {product.totalReviews > 0 && (

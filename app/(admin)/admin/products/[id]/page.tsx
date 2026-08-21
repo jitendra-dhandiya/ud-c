@@ -472,15 +472,11 @@ export default function EditProductPage() {
                         {variants.map((v: any) => (
                           <TableRow key={v.id} sx={{ '&:last-child td': { borderBottom: 0 } }}>
                             <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Box sx={{
-                                  width: 14, height: 14, borderRadius: '50%',
-                                  bgcolor: v.colorHex || '#ccc',
-                                  border: '1px solid rgba(0,0,0,0.15)',
-                                  flexShrink: 0,
-                                }} />
-                                <Typography variant="caption">{v.color || '—'}</Typography>
-                              </Box>
+                              {/* The name is the colour. Nothing renders a
+                                  swatch any more, here or on the storefront. */}
+                              <Typography variant="caption" sx={{ textTransform: 'capitalize' }}>
+                                {v.color || '—'}
+                              </Typography>
                             </TableCell>
                             <TableCell>
                               <Typography variant="caption">{v.size || '—'}</Typography>
@@ -663,26 +659,17 @@ export default function EditProductPage() {
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 0.25 }}>
-            <Grid item xs={8}>
+            <Grid item xs={12}>
+              {/* One field, not two. This slot used to hold a hex picker beside
+                  the name; when the picker went, its Grid cell was refilled
+                  with a second copy of the name field bound to the same state,
+                  so the dialog showed the colour twice. */}
               <TextField
-                label="Color Name" size="small" fullWidth
+                label="Colour Name" size="small" fullWidth
                 value={variantForm.color}
                 onChange={e => setVariantForm(prev => ({ ...prev, color: e.target.value }))}
-                placeholder="e.g. Black, Navy Blue"
-              />
-            </Grid>
-            <Grid item xs={4}>
-              <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: 'text.secondary' }}>
-                Color Hex
-              </Typography>
-              <TextField
-                label="Colour Name"
-                size="small"
-                fullWidth
                 placeholder="e.g. Black, Off White, Sage Green"
-                helperText="The swatch colour is derived from this name."
-                value={variantForm.color}
-                onChange={e => setVariantForm(prev => ({ ...prev, color: e.target.value }))}
+                helperText="Shown to customers exactly as typed."
               />
             </Grid>
             <Grid item xs={6}>
