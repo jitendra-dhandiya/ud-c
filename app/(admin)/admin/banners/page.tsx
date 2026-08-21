@@ -32,12 +32,40 @@ const TYPE_HINTS: Record<string, string> = {
   OFFER: 'Offer placements.',
   ANNOUNCEMENT: 'Announcement placements.',
 };
+/** The destinations a banner usually points at. */
+const LINK_PRESETS = [
+  { label: 'All products', url: '/shop' },
+  { label: 'New arrivals', url: '/shop?isNewArrival=true' },
+  { label: 'On sale', url: '/shop?discount=true' },
+  { label: 'Collections', url: '/collections' },
+];
+
 const PAGE_SIZE = 12;
 
 const schema = Yup.object({
   title: Yup.string().required('Title required'),
   type: Yup.string().required('Type required'),
-  linkUrl: Yup.string().url('Must be a valid URL').nullable(),
+  /**
+   * A destination on this site, or a full external URL.
+   *
+   * Yup's .url() rejects "/shop" outright, so the only thing this field would
+   * accept was an absolute URL — which meant hardcoding the domain into a
+   * banner and breaking every link if it ever changes. Paths are the normal
+   * case and are now the easy one.
+   */
+  linkUrl: Yup.string()
+    .nullable()
+    .test(
+      'internal-path-or-url',
+      'Use a path like /shop, or a full https:// address',
+      (value) => {
+        if (!value || !value.trim()) return true;
+        const v = value.trim();
+        if (v.startsWith('//')) return false;          // protocol-relative: ambiguous host
+        if (v.startsWith('/')) return true;            // on this site
+        return /^https?:\/\/\S+\.\S+/i.test(v);      // somewhere else
+      }
+    ),
   sortOrder: Yup.number().min(0),
 });
 
@@ -316,10 +344,31 @@ export default function BannersPage() {
               <MenuItem value="WOMEN">Women only</MenuItem>
               <MenuItem value="MEN">Men only</MenuItem>
             </TextField>
-            <TextField label="Link URL" size="small" fullWidth {...formik.getFieldProps('linkUrl')}
-              error={formik.touched.linkUrl && !!formik.errors.linkUrl}
-              helperText={formik.touched.linkUrl && formik.errors.linkUrl} />
-            <TextField label="Button Text" size="small" fullWidth {...formik.getFieldProps('buttonText')} />
+            <Box>
+              <TextField label="Where the banner links to" size="small" fullWidth
+                placeholder="/shop?isNewArrival=true"
+                {...formik.getFieldProps('linkUrl')}
+                error={formik.touched.linkUrl && !!formik.errors.linkUrl}
+                helperText={
+                  (formik.touched.linkUrl && formik.errors.linkUrl)
+                  || 'Tapping the banner image goes here. Leave blank and the banner is not clickable.'
+                } />
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1 }}>
+                {LINK_PRESETS.map(preset => (
+                  <Chip
+                    key={preset.url}
+                    label={preset.label}
+                    size="small"
+                    variant="outlined"
+                    onClick={() => formik.setFieldValue('linkUrl', preset.url)}
+                    sx={{ fontSize: '0.68rem', cursor: 'pointer' }}
+                  />
+                ))}
+              </Box>
+            </Box>
+            <TextField label="Button Text (optional)" size="small" fullWidth
+              {...formik.getFieldProps('buttonText')}
+              helperText="Used by promotional banners only. Hero banners show no button — the whole image is the link." />
             <TextField label="Sort Order" type="number" size="small" fullWidth {...formik.getFieldProps('sortOrder')} />
             <FormControlLabel
               control={<Switch checked={formik.values.isActive}

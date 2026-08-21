@@ -11,6 +11,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-fade';
+import { resolveBannerLink } from '../../lib/bannerLink';
 
 // Hero artwork is authored at 1440x560 (2.57:1) and the backend crops every
 // desktop master to exactly that ratio.
@@ -180,39 +181,49 @@ export default function HeroSlider({ banners }: HeroSliderProps) {
                   }}
                 />
               </picture>
-              {/* Scrim and CTA only exist to make an overlaid button readable.
-                  Title and subtitle are intentionally not rendered — the artwork
-                  carries the message, and title remains the alt text and the
-                  banner's label in admin. With no CTA there is nothing to keep
-                  legible, so the scrim would only dull the artwork. */}
-              {banner.ctaText && banner.link && (
-                <>
-                  <Box sx={{
-                    position: 'absolute', inset: 0,
-                    background: 'linear-gradient(to right, rgba(0,0,0,0.34) 0%, rgba(0,0,0,0.12) 45%, rgba(0,0,0,0) 100%)',
-                  }} />
-                  <Container maxWidth="xl" sx={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center' }}>
-                    <Box sx={{ color: 'white', maxWidth: { xs: '85%', md: 560 } }}>
-                      <motion.div initial={{ opacity: 0, x: -32 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.75 }}>
-                        <Button
-                          component={Link} href={banner.link}
-                          variant="contained"
-                          sx={{
-                            bgcolor: 'white', color: '#111',
-                            fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.12em',
-                            py: { xs: 1.2, md: 1.7 }, px: { xs: 3.5, md: 5.5 },
-                            borderRadius: 0,
-                            '&:hover': { bgcolor: '#c9a84c', color: '#111' },
-                            transition: 'all 0.28s',
-                          }}
-                        >
-                          {banner.ctaText}
-                        </Button>
-                      </motion.div>
-                    </Box>
-                  </Container>
-                </>
-              )}
+              {/* The artwork itself is the link.
+                  A hero exists to be clicked, and a shopper's instinct is to
+                  tap the picture, not hunt for a small button — which was the
+                  only clickable thing here, and only when a button label had
+                  been filled in too.
+
+                  Rendered as a sibling that covers the slide rather than a
+                  wrapper around it, so the swiper's own controls — arrows and
+                  pagination — stay outside the link and keep working.
+
+                  An absolute URL leaves the site, so it opens in a new tab and
+                  carries rel=noopener; a path stays in the SPA router. */}
+              {(() => {
+                const target = resolveBannerLink(banner.link);
+                if (!target) return null;
+                return target.external ? (
+                  <Box
+                    component="a"
+                    href={target.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={banner.title || 'View offer'}
+                    sx={{ position: 'absolute', inset: 0, zIndex: 1 }}
+                  />
+                ) : (
+                  <Box
+                    component={Link}
+                    href={target.href}
+                    aria-label={banner.title || 'View offer'}
+                    sx={{ position: 'absolute', inset: 0, zIndex: 1 }}
+                  />
+                );
+              })()}
+
+              {/* No overlay, by design.
+                  The artwork carries the message, and a button drawn on top of
+                  someone's photograph competes with it — so the scrim that
+                  existed only to keep that button readable is gone too. The
+                  whole image is the link instead, which is what a shopper
+                  reaches for anyway.
+
+                  `title` is still the alt text and the banner's label in admin;
+                  `ctaText` still drives the button on PROMOTIONAL banners. */}
             </Box>
           </SwiperSlide>
         ))}
