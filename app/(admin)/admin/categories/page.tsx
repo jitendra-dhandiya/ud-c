@@ -47,6 +47,15 @@ export default function CategoriesPage() {
   const [total, setTotal]               = useState(0);
   const [search, setSearch]             = useState('');
   const [genderFilter, setGenderFilter] = useState<string>('ALL');
+  /**
+   * Menu positions the admin has typed but not saved.
+   *
+   * Staged rather than saved per keystroke: reordering a menu means touching
+   * several rows at once, and a request per digit would fire a save for "1"
+   * on the way to "12".
+   */
+  const [orderEdits, setOrderEdits] = useState<Record<string, string>>({});
+  const [savingOrder, setSavingOrder] = useState(false);
   const [dialogOpen, setDialogOpen]     = useState(false);
   const [editCat, setEditCat]           = useState<any>(null);
   const [imageFile, setImageFile]       = useState<File | null>(null);
@@ -164,6 +173,30 @@ export default function CategoriesPage() {
     setImagePreview('');
   };
 
+  /** Rows whose typed position differs from what is stored. */
+  const dirtyOrders = Object.entries(orderEdits).filter(([id, value]) => {
+    const cat = categories.find((c: any) => c.id === id);
+    if (!cat) return false;
+    const n = Number(value);
+    return value.trim() !== '' && Number.isFinite(n) && n !== (cat.sortOrder ?? 0);
+  });
+
+  const handleSaveOrder = async () => {
+    if (!dirtyOrders.length) return;
+    setSavingOrder(true);
+    try {
+      const items = dirtyOrders.map(([id, value]) => ({ id, sortOrder: Math.trunc(Number(value)) }));
+      await categoryApi.updatePositions(items);
+      toast.success(`Menu order updated for ${items.length} ${items.length === 1 ? 'category' : 'categories'}`);
+      setOrderEdits({});
+      fetchCategories();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to save the menu order');
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this category? This cannot be undone.')) return;
     try {
@@ -264,6 +297,31 @@ export default function CategoriesPage() {
         </Typography>
       </Box>
 
+      {/* Staged order changes. Only appears once something is actually
+          different, so it never nags. */}
+      {dirtyOrders.length > 0 && (
+        <Box sx={{
+          display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, p: 1.5,
+          border: '1px solid #c9a84c', borderRadius: 2, bgcolor: '#fffdf5',
+        }}>
+          <Typography variant="caption" sx={{ fontWeight: 700, color: '#7a6320', flex: 1 }}>
+            {dirtyOrders.length} unsaved menu {dirtyOrders.length === 1 ? 'position' : 'positions'} — lower numbers show first in the Shop menu.
+          </Typography>
+          <Button size="small" onClick={() => setOrderEdits({})} sx={{ color: '#7a6320' }}>
+            Discard
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            onClick={handleSaveOrder}
+            disabled={savingOrder}
+            sx={{ bgcolor: '#1a1a1a', '&:hover': { bgcolor: '#333' }, fontWeight: 700 }}
+          >
+            {savingOrder ? 'Saving…' : `Save order (${dirtyOrders.length})`}
+          </Button>
+        </Box>
+      )}
+
       {loading ? (
         <Stack spacing={1.5}>
           {[...Array(6)].map((_, i) => <Skeleton key={i} height={72} sx={{ borderRadius: 2 }} />)}
@@ -328,6 +386,21 @@ export default function CategoriesPage() {
                   </Box>
 
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+
+                    {/* Menu position. Lower shows first — the same direction as
+                        every other sortOrder, and the order the nav reads. */}
+                    <Tooltip title="Position in the Shop menu — lower shows first" arrow>
+                      <TextField
+                        size="small"
+                        type="number"
+                        value={orderEdits[cat.id] ?? String(cat.sortOrder ?? 0)}
+                        onChange={(e) =>
+                          setOrderEdits(prev => ({ ...prev, [cat.id]: e.target.value }))
+                        }
+                        inputProps={{ style: { textAlign: 'center', padding: '4px 6px', fontSize: '0.75rem', fontWeight: 700 } }}
+                        sx={{ width: 62, '& .MuiOutlinedInput-root': { height: 28 } }}
+                      />
+                    </Tooltip>
 
                     {/* Quick gender select */}
                     <Tooltip title="Set gender for this category" arrow>

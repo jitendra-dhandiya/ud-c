@@ -23,6 +23,7 @@ import { openLoginModal } from '../../store/slices/uiSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { productApi } from '../../services/api.service';
 import { MegaMenuDesktop, MegaMenuMobile, type NavCategory } from './MegaMenu';
+import { visibleNavCategories } from '../../lib/navMenu';
 
 /**
  * Intrinsic aspect ratio of the brand lockup (public/logo-mark.png, 1092x240).
@@ -43,13 +44,25 @@ import { MegaMenuDesktop, MegaMenuMobile, type NavCategory } from './MegaMenu';
  */
 const LOGO_ASPECT = '1092 / 240';
 
-const NAV_LINKS = [
+/**
+ * The fixed links either side of the Shop mega menu.
+ *
+ * "Shop" is deliberately absent: the mega menu's own trigger is labelled Shop
+ * and links to /shop, so listing it here as well put two SHOP entries in the
+ * bar — one that opened the menu and one that did not.
+ */
+const NAV_LINKS_BEFORE = [
   { label: 'New In', href: '/shop?isNewArrival=true' },
-  { label: 'Shop', href: '/shop' },
+];
+
+const NAV_LINKS_AFTER = [
   { label: 'Collections', href: '/collections' },
   { label: 'Sale', href: '/shop?discount=true' },
   { label: 'Blog', href: '/blog' },
 ];
+
+/** Both groups, for the mobile drawer, which lists them in one run. */
+const NAV_LINKS = [...NAV_LINKS_BEFORE, ...NAV_LINKS_AFTER];
 
 interface NavbarProps {
   settings?: Record<string, string>;
@@ -64,15 +77,13 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
   const { itemCount } = useAppSelector((s) => s.cart);
   const gender = useAppSelector((s) => s.gender.selected);
 
-  // Strict gender filter for the mega menu:
-  // UNISEX → always visible; null/Unset → never visible; WOMEN/MEN → only when that gender is active
-  const filteredNavCategories = useMemo(() => {
-    return navCategories.filter(cat => {
-      if (cat.gender === 'UNISEX') return true;
-      if (!cat.gender) return false;
-      return cat.gender === gender;
-    });
-  }, [navCategories, gender]);
+  // Parents AND their children are filtered — see lib/navMenu. Previously only
+  // the parents were, which is how "Mens denim" appeared under DENIM while the
+  // shopper was browsing WOMEN.
+  const filteredNavCategories = useMemo(
+    () => visibleNavCategories(navCategories, gender),
+    [navCategories, gender]
+  );
   const { user, isAuthenticated, logout, isAdmin } = useAuth();
 
   const handleGenderChange = (g: GenderType) => {
@@ -284,7 +295,7 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
             {/* Desktop nav links */}
             {!isMobile && (
               <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 0, flexGrow: 1, height: '100%' }}>
-                {NAV_LINKS.map((link) => (
+                {NAV_LINKS_BEFORE.map((link) => (
                   <Button
                     key={link.href}
                     component={Link}
@@ -305,9 +316,33 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
                     {link.label}
                   </Button>
                 ))}
+
+                {/* Shop sits second, where shoppers look for it — not after Blog. */}
                 {filteredNavCategories.length > 0 && (
                   <MegaMenuDesktop categories={filteredNavCategories} />
                 )}
+
+                {NAV_LINKS_AFTER.map((link) => (
+                  <Button
+                    key={link.href}
+                    component={Link}
+                    href={link.href}
+                    sx={{
+                      color: 'text.primary',
+                      fontWeight: 500,
+                      fontSize: '0.8rem',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      px: 1.5,
+                      borderRadius: 0,
+                      borderBottom: '2px solid transparent',
+                      '&:hover': { color: '#1a1a1a', bgcolor: 'transparent', borderBottomColor: '#1a1a1a' },
+                      transition: 'color 0.2s, border-color 0.2s',
+                    }}
+                  >
+                    {link.label}
+                  </Button>
+                ))}
               </Box>
             )}
 

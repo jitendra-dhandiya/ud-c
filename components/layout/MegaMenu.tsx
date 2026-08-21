@@ -3,7 +3,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Box, Typography, Container, Divider, IconButton,
-  Collapse, List, ListItemButton, ListItemText,
+  Collapse, ListItemButton, ListItemText,
 } from '@mui/material';
 import { ExpandMore, ExpandLess, ArrowForward, GridView } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,6 +34,9 @@ interface MegaMenuProps {
 
 // ── Quick-link chips at the top of the mega panel ─────────────────
 const QUICK_LINKS = [
+  // First, because removing the duplicate SHOP link from the bar left the
+  // trigger itself as a toggle rather than a link to the full catalogue.
+  { label: 'Shop All',      href: '/shop'                   },
   { label: 'New Arrivals',  href: '/shop?isNewArrival=true' },
   { label: 'Best Sellers',  href: '/shop?sort=best-sellers' },
   { label: 'On Sale',       href: '/shop?discount=true'     },
@@ -415,102 +418,159 @@ export function MegaMenuDesktop({ categories, onLinkClick }: MegaMenuProps) {
   );
 }
 
-// ── Mobile accordion (used inside the mobile drawer in Navbar) ────
+// ── Mobile menu ───────────────────────────────────────────────────
+/**
+ * Rebuilt as a browsable list rather than a text accordion.
+ *
+ * The previous version was three sizes of the same grey text: a shopper on a
+ * phone had to read every row to find anything, and the category images the
+ * catalogue already carries went unused. Each row now leads with its own
+ * thumbnail and says how many subcategories sit under it, so the menu can be
+ * scanned instead of read.
+ */
 export function MegaMenuMobile({ categories, onLinkClick }: MegaMenuProps) {
   const [expanded, setExpanded] = useState<string | false>(false);
 
   return (
     <Box>
-      {/* Quick links */}
-      {QUICK_LINKS.map(q => (
-        <ListItemButton
-          key={q.href}
-          component={Link}
-          href={q.href}
-          onClick={onLinkClick}
-          sx={{ py: 1.25, pl: 2, color: 'inherit', textDecoration: 'none', '&:hover': { bgcolor: '#f5f5f5' } }}
-        >
-          <ListItemText
-            primary={q.label}
-            primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600, color: '#b0a090' }}
-          />
-        </ListItemButton>
-      ))}
+      {/* Quick links as chips — three taps' worth of intent, one row. */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, px: 2, pb: 1.5 }}>
+        {QUICK_LINKS.map(q => (
+          <Box
+            key={q.href}
+            component={Link}
+            href={q.href}
+            onClick={onLinkClick}
+            sx={{
+              px: 1.5, py: 0.6,
+              border: '1px solid #e6e2dc', borderRadius: 5,
+              fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em',
+              color: '#6b5f4e', textDecoration: 'none', bgcolor: '#fdfcfa',
+              '&:active': { bgcolor: '#1a1a1a', color: '#fff' },
+            }}
+          >
+            {q.label}
+          </Box>
+        ))}
+      </Box>
 
-      <Divider sx={{ my: 0.5 }} />
+      <Divider sx={{ mb: 0.5 }} />
 
-      {/* Category accordion */}
-      {categories.map(cat => (
-        <Box key={cat.id}>
-          {cat.children.length > 0 ? (
-            <>
-              <ListItemButton
-                onClick={() => setExpanded(expanded === cat.id ? false : cat.id)}
-                sx={{ py: 1.25, pl: 2, color: 'inherit', textDecoration: 'none', '&:hover': { bgcolor: '#f5f5f5' } }}
+      {categories.map(cat => {
+        const isOpen = expanded === cat.id;
+        const childCount = cat.children.length;
+        return (
+          <Box key={cat.id} sx={{ borderBottom: '1px solid #f4f4f4' }}>
+            <Box sx={{ display: 'flex', alignItems: 'stretch' }}>
+              {/* The name is a link, always. Tapping a category should reach
+                  that category — expanding is the secondary action, which is
+                  why it has its own hit area on the right. */}
+              <Box
+                component={Link}
+                href={`/category/${cat.slug}`}
+                onClick={onLinkClick}
+                sx={{
+                  flex: 1, minWidth: 0,
+                  display: 'flex', alignItems: 'center', gap: 1.5,
+                  px: 2, py: 1.25,
+                  textDecoration: 'none', color: 'inherit',
+                  '&:active': { bgcolor: '#fafafa' },
+                }}
               >
-                <ListItemText
-                  primary={cat.name}
-                  primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }}
-                />
-                {expanded === cat.id ? <ExpandLess fontSize="small" sx={{ color: '#999' }} /> : <ExpandMore fontSize="small" sx={{ color: '#999' }} />}
-              </ListItemButton>
-
-              <Collapse in={expanded === cat.id} timeout="auto">
-                <List disablePadding>
-                  <ListItemButton
-                    component={Link}
-                    href={`/category/${cat.slug}`}
-                    onClick={onLinkClick}
-                    sx={{ pl: 4, py: 0.9, color: 'inherit', textDecoration: 'none', '&:hover': { bgcolor: '#fafafa' } }}
-                  >
-                    <ListItemText
-                      primary={`All ${cat.name}`}
-                      primaryTypographyProps={{ fontSize: '0.82rem', fontWeight: 600, color: '#333' }}
+                <Box sx={{
+                  width: 44, height: 52, borderRadius: 1, flexShrink: 0,
+                  overflow: 'hidden', bgcolor: '#f3f1ee',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {cat.image ? (
+                    <Box
+                      component="img"
+                      src={cat.image}
+                      alt=""
+                      loading="lazy"
+                      sx={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }}
                     />
-                  </ListItemButton>
-                  {cat.children.map(child => (
-                    <ListItemButton
-                      key={child.id}
-                      component={Link}
-                      href={`/category/${child.slug}`}
-                      onClick={onLinkClick}
-                      sx={{ pl: 4, py: 0.75, color: 'inherit', textDecoration: 'none', '&:hover': { bgcolor: '#fafafa' } }}
-                    >
-                      <ListItemText
-                        primary={child.name}
-                        primaryTypographyProps={{ fontSize: '0.82rem', color: '#555' }}
-                      />
-                    </ListItemButton>
-                  ))}
-                </List>
-              </Collapse>
-            </>
-          ) : (
-            <ListItemButton
-              component={Link}
-              href={`/category/${cat.slug}`}
-              onClick={onLinkClick}
-              sx={{ py: 1.25, pl: 2, color: 'inherit', textDecoration: 'none', '&:hover': { bgcolor: '#f5f5f5' } }}
-            >
-              <ListItemText
-                primary={cat.name}
-                primaryTypographyProps={{ fontSize: '0.88rem', fontWeight: 600 }}
-              />
-            </ListItemButton>
-          )}
-        </Box>
-      ))}
+                  ) : (
+                    <Typography sx={{
+                      fontFamily: 'var(--font-playfair)', fontSize: '1.1rem',
+                      fontWeight: 700, color: '#c9b79a',
+                    }}>
+                      {cat.name.charAt(0)}
+                    </Typography>
+                  )}
+                </Box>
 
-      <Divider sx={{ my: 0.5 }} />
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography sx={{
+                    fontSize: '0.9rem', fontWeight: 700, color: '#1a1a1a',
+                    lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {cat.name}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.68rem', color: '#9a9a9a', letterSpacing: '0.03em' }}>
+                    {childCount > 0 ? `${childCount} ${childCount === 1 ? 'category' : 'categories'}` : 'Shop now'}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {childCount > 0 && (
+                <IconButton
+                  onClick={() => setExpanded(isOpen ? false : cat.id)}
+                  aria-label={isOpen ? `Collapse ${cat.name}` : `Expand ${cat.name}`}
+                  sx={{ px: 2, borderRadius: 0, color: '#bbb', '&:active': { bgcolor: '#fafafa' } }}
+                >
+                  {isOpen ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+                </IconButton>
+              )}
+            </Box>
+
+            <Collapse in={isOpen} timeout="auto" unmountOnExit>
+              <Box sx={{ pl: 2, pr: 2, pb: 1.5, display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                <Box
+                  component={Link}
+                  href={`/category/${cat.slug}`}
+                  onClick={onLinkClick}
+                  sx={{
+                    px: 1.5, py: 0.65, borderRadius: 5,
+                    bgcolor: '#1a1a1a', color: '#fff',
+                    fontSize: '0.74rem', fontWeight: 700, textDecoration: 'none',
+                  }}
+                >
+                  All {cat.name}
+                </Box>
+                {cat.children.map(child => (
+                  <Box
+                    key={child.id}
+                    component={Link}
+                    href={`/category/${child.slug}`}
+                    onClick={onLinkClick}
+                    sx={{
+                      px: 1.5, py: 0.65, borderRadius: 5,
+                      border: '1px solid #e8e8e8', bgcolor: '#fff',
+                      fontSize: '0.74rem', fontWeight: 500, color: '#444',
+                      textDecoration: 'none',
+                      '&:active': { bgcolor: '#1a1a1a', color: '#fff', borderColor: '#1a1a1a' },
+                    }}
+                  >
+                    {child.name}
+                  </Box>
+                ))}
+              </Box>
+            </Collapse>
+          </Box>
+        );
+      })}
+
       <ListItemButton
         component={Link}
         href="/categories"
         onClick={onLinkClick}
-        sx={{ py: 1.25, pl: 2, color: 'inherit', textDecoration: 'none', '&:hover': { bgcolor: '#f5f5f5' } }}
+        sx={{ py: 1.4, px: 2, color: 'inherit', textDecoration: 'none' }}
       >
+        <GridView sx={{ fontSize: 15, color: '#aaa', mr: 1 }} />
         <ListItemText
           primary="View All Categories"
-          primaryTypographyProps={{ fontSize: '0.82rem', color: '#888', fontWeight: 500 }}
+          primaryTypographyProps={{ fontSize: '0.82rem', color: '#888', fontWeight: 600 }}
         />
       </ListItemButton>
     </Box>

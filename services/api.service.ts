@@ -69,6 +69,9 @@ export const categoryApi = {
   create:      (data: FormData) => api.post('/categories', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   update:      (id: string, data: FormData) => api.put(`/categories/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   delete:      (id: string) => api.delete(`/categories/${id}`),
+  /** Bulk menu positions. Lower shows first in the nav. */
+  updatePositions: (items: { id: string; sortOrder: number }[]) =>
+    api.patch('/categories/positions', { items }),
 };
 
 // ─── Cart ─────────────────────────────────────────────────────
