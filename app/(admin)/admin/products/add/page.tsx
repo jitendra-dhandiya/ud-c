@@ -12,6 +12,7 @@ import { productApi, categoryApi } from '../../../../../services/api.service';
 import { GENDERS } from '../../../../../constants';
 import { toast } from 'react-hot-toast';
 import SortableImageGrid, { type SortableImage } from '../../../../../components/admin/SortableImageGrid';
+import { parseSizeInput, SIZE_PRESETS } from '../../../../../lib/sizeInput';
 
 /**
  * Offered as quick-add chips only. Sizes are free text — a catalogue carries
@@ -152,6 +153,50 @@ export default function AddProductPage() {
       ),
     [formik.values.variants]
   );
+
+  /**
+   * Add several sizes to one colour at once, skipping any already there.
+   *
+   * Every entry point funnels through here — the preset runs, the typed list
+   * and the copy-from-colour button — so "already added" behaves identically
+   * whichever way the admin works.
+   */
+  const addSizes = (vi: number, incoming: { size: string; stock: number; price: string }[]) => {
+    const current = formik.values.variants[vi]?.sizes || [];
+    const have = new Set(current.map((x: any) => String(x.size).toLowerCase()));
+    const fresh = incoming.filter(x => x.size && !have.has(x.size.toLowerCase()));
+    if (!fresh.length) {
+      toast('Those sizes are already added', { icon: 'ℹ️' });
+      return;
+    }
+    formik.setFieldValue(`variants.${vi}.sizes`, [...current, ...fresh]);
+    toast.success(`Added ${fresh.length} size${fresh.length === 1 ? '' : 's'}`);
+  };
+
+  /** One stock figure across every size of a colour — the usual case. */
+  const setAllStock = (vi: number, stock: number) => {
+    const current = formik.values.variants[vi]?.sizes || [];
+    if (!current.length) return;
+    formik.setFieldValue(
+      `variants.${vi}.sizes`,
+      current.map((x: any) => ({ ...x, stock })),
+    );
+    toast.success(`All ${current.length} sizes set to ${stock}`);
+  };
+
+  /** Clone a colour's whole size run, which is nearly always identical. */
+  const copySizesFrom = (targetIndex: number, sourceIndex: number) => {
+    const source = formik.values.variants[sourceIndex]?.sizes || [];
+    if (!source.length) {
+      toast.error('That colour has no sizes to copy yet');
+      return;
+    }
+    formik.setFieldValue(
+      `variants.${targetIndex}.sizes`,
+      source.map((x: any) => ({ ...x })),
+    );
+    toast.success(`Copied ${source.length} sizes`);
+  };
 
   const handleImages = (files: File[]) => {
     if (!files.length) return;
@@ -340,11 +385,44 @@ export default function AddProductPage() {
                         )}
                       </Box>
 
-                      {/* Sizes are free text and added one at a time.
-                          A fixed XS-XXL grid cannot express a denim catalogue
-                          (waist 26-36), "Free Size", or UK numbering, and it
-                          forced every product to carry six rows whether or not
-                          those sizes existed. */}
+                      {/* Sizes stay free text — a fixed XS-XXL grid cannot
+                          express a denim catalogue (waist 26-36), "Free Size"
+                          or UK numbering. What changed is the speed: a whole
+                          run goes in with one click, because adding six waists
+                          across two colours used to be twelve separate clicks
+                          before a single stock figure had been typed. */}
+
+                      {/* Whole runs, one click each. */}
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', mb: 1.5 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#888', mr: 0.5 }}>
+                          ADD A SET:
+                        </Typography>
+                        {SIZE_PRESETS.map(preset => (
+                          <Chip
+                            key={preset.label}
+                            label={preset.label}
+                            size="small"
+                            onClick={() => addSizes(vi, preset.sizes.map(size => ({
+                              size, stock: DEFAULT_SIZE_STOCK, price: '',
+                            })))}
+                            sx={{
+                              fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer',
+                              bgcolor: '#1a1a1a', color: '#fff',
+                              '&:hover': { bgcolor: '#333' },
+                            }}
+                          />
+                        ))}
+                        {vi > 0 && (
+                          <Chip
+                            label={`Copy sizes from ${formik.values.variants[0]?.color?.trim() || 'first colour'}`}
+                            size="small"
+                            variant="outlined"
+                            onClick={() => copySizesFrom(vi, 0)}
+                            sx={{ fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}
+                          />
+                        )}
+                      </Box>
+
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
                         {SIZE_SUGGESTIONS.filter(sz => !variant.sizes.some(x => x.size === sz)).map(sz => (
                           <Chip
@@ -359,21 +437,20 @@ export default function AddProductPage() {
                         ))}
                         <TextField
                           size="small"
-                          placeholder="Custom size + Enter"
-                          sx={{ width: 170 }}
+                          placeholder="26, 28, 30 or 26-36 + Enter"
+                          sx={{ width: 230 }}
                           onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                             if (e.key !== 'Enter') return;
                             e.preventDefault();
                             const el = e.target as HTMLInputElement;
-                            const value = el.value.trim();
-                            if (!value) return;
-                            if (variant.sizes.some(x => x.size.toLowerCase() === value.toLowerCase())) {
-                              toast.error(`"${value}" is already added`);
-                              return;
-                            }
-                            formik.setFieldValue(`variants.${vi}.sizes`, [
-                              ...variant.sizes, { size: value, stock: DEFAULT_SIZE_STOCK, price: '' },
-                            ]);
+                            // One entry can carry a list or a range — see
+                            // parseSizeInput. Typing them one at a time was the
+                            // slow part.
+                            const parsed = parseSizeInput(el.value);
+                            if (!parsed.length) return;
+                            addSizes(vi, parsed.map(size => ({
+                              size, stock: DEFAULT_SIZE_STOCK, price: '',
+                            })));
                             el.value = '';
                           }}
                         />
@@ -384,6 +461,40 @@ export default function AddProductPage() {
                           No sizes yet — add the ones this colour actually comes in.
                         </Typography>
                       ) : (
+                        <>
+                        {/* Stock is usually the same across a run, so setting
+                            it once beats typing it into every box. */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: '#888' }}>
+                            SET STOCK FOR ALL {variant.sizes.length} SIZES:
+                          </Typography>
+                          {[2, 5, 10, 25].map(n => (
+                            <Chip
+                              key={n}
+                              label={n}
+                              size="small"
+                              variant="outlined"
+                              onClick={() => setAllStock(vi, n)}
+                              sx={{ fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', minWidth: 42 }}
+                            />
+                          ))}
+                          <TextField
+                            size="small"
+                            type="number"
+                            placeholder="Other"
+                            sx={{ width: 92 }}
+                            inputProps={{ min: 0 }}
+                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                              if (e.key !== 'Enter') return;
+                              e.preventDefault();
+                              const el = e.target as HTMLInputElement;
+                              const n = Number(el.value);
+                              if (!Number.isFinite(n) || n < 0) return;
+                              setAllStock(vi, Math.trunc(n));
+                              el.value = '';
+                            }}
+                          />
+                        </Box>
                         <Grid container spacing={1.5}>
                           {variant.sizes.map((sv, si) => (
                             <Grid item xs={6} sm={3} md={2} key={`${sv.size}-${si}`}>
@@ -412,6 +523,7 @@ export default function AddProductPage() {
                             </Grid>
                           ))}
                         </Grid>
+                        </>
                       )}
                     </Box>
                   ))}

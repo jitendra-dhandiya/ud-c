@@ -55,7 +55,9 @@ export default function NavigationProgress() {
         top: 0,
         left: 0,
         right: 0,
-        height: 2,
+        // 2px read as a hairline on a busy header and was easy to miss —
+        // which defeats the point of an acknowledgement.
+        height: 4,
         zIndex: 2000,
         pointerEvents: 'none',
       }}
@@ -66,6 +68,9 @@ export default function NavigationProgress() {
           width: '100%',
           transformOrigin: '0 50%',
           background: 'linear-gradient(90deg, #c9a84c, #e6cf8a)',
+          // A soft bloom so the bar reads against both the white header and a
+          // dark hero without needing a heavier stroke.
+          boxShadow: '0 0 8px rgba(201,168,76,0.6)',
           transform: state === 'done' ? 'scaleX(1)' : 'scaleX(0.65)',
           opacity: state === 'done' ? 0 : 1,
           transition: state === 'done'
