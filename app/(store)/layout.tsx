@@ -35,17 +35,36 @@ async function getNavCategories() {
   }
 }
 
+/**
+ * Quick links for the Shop menu. Every link is fetched, gender included, and
+ * the client picks which apply — the layout is shared by all shoppers and the
+ * gender lives in a client-side store.
+ */
+async function getQuickLinks() {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/nav-menus?position=quick_links`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.data || [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
-  const [settings, navCategories] = await Promise.all([
+  const [settings, navCategories, quickLinks] = await Promise.all([
     getPublicSettings(),
     getNavCategories(),
+    getQuickLinks(),
   ]);
 
   return (
     <MobileMotionConfig>
       <AuthInitializer />
       <GenderInitializer />
-      <Navbar settings={settings} navCategories={navCategories} />
+      <Navbar settings={settings} navCategories={navCategories} quickLinks={quickLinks} />
       <main style={{ minHeight: '70vh' }}>{children}</main>
       <Footer settings={settings} />
       <CartDrawer />

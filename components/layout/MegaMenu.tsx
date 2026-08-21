@@ -27,23 +27,46 @@ export interface NavCategory {
 
 interface MegaMenuProps {
   categories: NavCategory[];
+  /** Admin-managed; falls back to DEFAULT_QUICK_LINKS when empty. */
+  quickLinks?: QuickLink[];
   /** Mobile only — pass true when the mobile drawer is open */
   mobileMode?: boolean;
   onLinkClick?: () => void;
 }
 
 // ── Quick-link chips at the top of the mega panel ─────────────────
-const QUICK_LINKS = [
-  // First, because removing the duplicate SHOP link from the bar left the
-  // trigger itself as a toggle rather than a link to the full catalogue.
-  { label: 'Shop All',      href: '/shop'                   },
-  { label: 'New Arrivals',  href: '/shop?isNewArrival=true' },
-  { label: 'Best Sellers',  href: '/shop?sort=best-sellers' },
-  { label: 'On Sale',       href: '/shop?discount=true'     },
+export interface QuickLink {
+  id?: string;
+  label: string;
+  url: string;
+  gender?: string | null;
+}
+
+/**
+ * Used only while the admin has configured no quick links of their own.
+ *
+ * Applied by the Navbar BEFORE the gender filter, deliberately: if an admin
+ * configures links for MEN only, women should see none — not have these
+ * quietly reinstated because the filtered list came out empty.
+ *
+ * Keeping a fallback means turning this into an admin-managed list cannot
+ * empty the top of the menu — a fresh install, or a database where every link
+ * was deleted, still shows something sensible. "Shop All" leads because the
+ * bar's SHOP entry is a menu trigger rather than a link to the full catalogue.
+ */
+const DEFAULT_QUICK_LINKS: QuickLink[] = [
+  { label: 'Shop All',      url: '/shop'                   },
+  { label: 'New Arrivals',  url: '/shop?isNewArrival=true' },
+  { label: 'Best Sellers',  url: '/shop?sort=best-sellers' },
+  { label: 'On Sale',       url: '/shop?discount=true'     },
 ];
 
+export const resolveQuickLinks = (links?: QuickLink[] | null): QuickLink[] =>
+  links && links.length ? links : DEFAULT_QUICK_LINKS;
+
 // ── Desktop MegaMenu ──────────────────────────────────────────────
-export function MegaMenuDesktop({ categories, onLinkClick }: MegaMenuProps) {
+export function MegaMenuDesktop({ categories, quickLinks, onLinkClick }: MegaMenuProps) {
+  const links = quickLinks ?? [];
   const [open, setOpen]             = useState(false);
   const [hovered, setHovered]       = useState<string | null>(null);
   const closeTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -139,11 +162,11 @@ export function MegaMenuDesktop({ categories, onLinkClick }: MegaMenuProps) {
                   <Typography variant="overline" sx={{ fontSize: '0.65rem', letterSpacing: '0.15em', color: '#999', px: 1 }}>
                     Quick Links
                   </Typography>
-                  {QUICK_LINKS.map(q => (
+                  {links.map(q => (
                     <Box
-                      key={q.href}
+                      key={q.id || q.url}
                       component={Link}
-                      href={q.href}
+                      href={q.url}
                       onClick={() => { setOpen(false); onLinkClick?.(); }}
                       sx={{
                         display: 'flex', alignItems: 'center', gap: 1,
@@ -428,18 +451,19 @@ export function MegaMenuDesktop({ categories, onLinkClick }: MegaMenuProps) {
  * thumbnail and says how many subcategories sit under it, so the menu can be
  * scanned instead of read.
  */
-export function MegaMenuMobile({ categories, onLinkClick }: MegaMenuProps) {
+export function MegaMenuMobile({ categories, quickLinks, onLinkClick }: MegaMenuProps) {
   const [expanded, setExpanded] = useState<string | false>(false);
+  const links = quickLinks ?? [];
 
   return (
     <Box>
       {/* Quick links as chips — three taps' worth of intent, one row. */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, px: 2, pb: 1.5 }}>
-        {QUICK_LINKS.map(q => (
+        {links.map(q => (
           <Box
-            key={q.href}
+            key={q.id || q.url}
             component={Link}
-            href={q.href}
+            href={q.url}
             onClick={onLinkClick}
             sx={{
               px: 1.5, py: 0.6,

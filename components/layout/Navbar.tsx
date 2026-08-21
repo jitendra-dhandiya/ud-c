@@ -22,7 +22,7 @@ import { persistGender } from '../../lib/genderPreference';
 import { openLoginModal } from '../../store/slices/uiSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { productApi } from '../../services/api.service';
-import { MegaMenuDesktop, MegaMenuMobile, type NavCategory } from './MegaMenu';
+import { MegaMenuDesktop, MegaMenuMobile, resolveQuickLinks, type NavCategory, type QuickLink } from './MegaMenu';
 import { visibleNavCategories } from '../../lib/navMenu';
 
 /**
@@ -67,9 +67,11 @@ const NAV_LINKS = [...NAV_LINKS_BEFORE, ...NAV_LINKS_AFTER];
 interface NavbarProps {
   settings?: Record<string, string>;
   navCategories?: NavCategory[];
+  /** Admin-managed quick links for the Shop menu; empty falls back to defaults. */
+  quickLinks?: QuickLink[];
 }
 
-export default function Navbar({ settings = {}, navCategories = [] }: NavbarProps) {
+export default function Navbar({ settings = {}, navCategories = [], quickLinks = [] }: NavbarProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const router = useRouter();
@@ -83,6 +85,15 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
   const filteredNavCategories = useMemo(
     () => visibleNavCategories(navCategories, gender),
     [navCategories, gender]
+  );
+
+  // A link tagged ALL shows on both storefronts; WOMEN/MEN show only on theirs.
+  const filteredQuickLinks = useMemo(
+    () => resolveQuickLinks(quickLinks).filter(link => {
+      const g = (link.gender || 'ALL').toUpperCase();
+      return g === 'ALL' || g === gender;
+    }),
+    [quickLinks, gender]
   );
   const { user, isAuthenticated, logout, isAdmin } = useAuth();
 
@@ -319,7 +330,7 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
 
                 {/* Shop sits second, where shoppers look for it — not after Blog. */}
                 {filteredNavCategories.length > 0 && (
-                  <MegaMenuDesktop categories={filteredNavCategories} />
+                  <MegaMenuDesktop categories={filteredNavCategories} quickLinks={filteredQuickLinks} />
                 )}
 
                 {NAV_LINKS_AFTER.map((link) => (
@@ -611,7 +622,7 @@ export default function Navbar({ settings = {}, navCategories = [] }: NavbarProp
                     Shop by Category
                   </Typography>
                 </Box>
-                <MegaMenuMobile categories={filteredNavCategories} onLinkClick={() => setMobileOpen(false)} />
+                <MegaMenuMobile categories={filteredNavCategories} quickLinks={filteredQuickLinks} onLinkClick={() => setMobileOpen(false)} />
               </>
             )}
             <Divider sx={{ my: 1 }} />

@@ -241,6 +241,20 @@ export const instagramReelsApi = {
   reorder: (order: { id: string; sortOrder: number }[]) => api.patch('/instagram-reels/reorder', { order }),
 };
 
+// ─── Nav menu links (Shop menu quick links) ───────────────────
+export const navMenuApi = {
+  getPublic: (position = 'quick_links', gender?: string) =>
+    api.get('/nav-menus', { params: { position, ...(gender ? { gender } : {}) } }),
+  getAll: (position = 'quick_links') => api.get('/nav-menus/admin', { params: { position } }),
+  create: (data: object) => api.post('/nav-menus', data),
+  update: (id: string, data: object) => api.put(`/nav-menus/${id}`, data),
+  delete: (id: string) => api.delete(`/nav-menus/${id}`),
+  updatePositions: (items: { id: string; sortOrder: number }[]) =>
+    api.patch('/nav-menus/positions', { items }),
+  importDefaults: (position = 'quick_links') =>
+    api.post('/nav-menus/import-defaults', { position }),
+};
+
 // ─── Analytics ────────────────────────────────────────────────
 export const analyticsApi = {
   getDashboard: () => api.get('/analytics/dashboard'),

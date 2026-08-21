@@ -39,6 +39,7 @@ const NAV_ITEMS = [
     icon: <Web fontSize="small" />,
     children: [
       { label: 'Homepage Builder', href: '/admin/homepage' },
+      { label: 'Menu Links', href: '/admin/menu-links' },
       { label: 'Marquee / Ticker', href: '/admin/marquee' },
       { label: 'Banners', href: '/admin/banners' },
       { label: 'Instagram Reels', href: '/admin/instagram-reels' },
