@@ -10,6 +10,7 @@ import {
 import {
   FavoriteBorder, Favorite, Share, ExpandMore,
   NavigateNext, LocalShipping, Replay, Security,
+  ChevronLeft, ChevronRight,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import type { Product, ProductVariant } from '../../types';
@@ -20,7 +21,8 @@ import { useAppSelector } from '../../store';
 import toast from 'react-hot-toast';
 import ProductSection from '../home/ProductSection';
 import OptionBox from './OptionBox';
-import { galleryFor } from '../../lib/productImages';
+import { galleryFor, groupGalleryByColor, firstIndexOfColor, sameColor } from '../../lib/productImages';
+import { sortSizes } from '../../lib/sizeSort';
 import { getRecentlyViewed, recordView } from '../../lib/recentlyViewed';
 
 interface Props {
@@ -49,13 +51,13 @@ export default function ProductDetailClient({ product }: Props) {
    * that size — XL might be sold out in Black but in stock in White, and that
    * still counts as available.
    */
-  const uniqueSizes = [
+  const uniqueSizes = sortSizes([
     ...new Set(
       product.variants
         ?.filter((v) => v.size && (v.stockQuantity ?? 0) > 0)
         .map((v) => v.size) ?? []
     ),
-  ];
+  ]);
 
   const uniqueColors = [
     ...new Set(
@@ -125,22 +127,73 @@ export default function ProductDetailClient({ product }: Props) {
   }, [product.id]);
 
   /**
-   * The shots for the chosen colour, falling back to the default set — see
-   * galleryFor. Derived rather than stored so it can never drift out of step
-   * with the selection.
+   * Every shot the product has, in catalogue order.
+   *
+   * This used to be filtered down to the chosen colour, which hid half the
+   * photographs: a four-shot product read as a two-shot product, and the other
+   * two only existed if you thought to click the other colour. The full set is
+   * shown instead, and the colour is expressed by the labelled runs in the
+   * thumbnail strip below.
    */
-  const gallery = useMemo(
-    () => galleryFor(product.images as any[], selectedColor),
-    [product.images, selectedColor]
-  );
+  const gallery = useMemo(() => galleryFor(product.images as any[]), [product.images]);
 
-  const handleColorSelect = (color: string) => {
+  /** The same shots split into the labelled colour runs the strip renders. */
+  const imageGroups = useMemo(() => groupGalleryByColor(gallery), [gallery]);
+
+  /**
+   * Pick a colour, keeping the size row, the variant and the picture in step.
+   *
+   * A size chosen under the previous colour survives only if this colour
+   * carries it as well. Otherwise the page would go on reading "Size: 32" with
+   * no such variant behind it, and Add to Bag would post the product with no
+   * variant at all.
+   */
+  const selectColor = (color: string, jumpToItsImage = true) => {
     setSelectedColor(color);
-    // The gallery it points into is about to change; index 3 of the old set
-    // means nothing in the new one, and may not even exist.
-    setSelectedImage(0);
-    const variant = product.variants?.find((v) => v.color === color && (selectedSize ? v.size === selectedSize : true));
-    setSelectedVariant(variant || null);
+
+    const keepsSize = !!selectedSize && !!product.variants?.some(
+      (v) => v.color === color && v.size === selectedSize && (v.stockQuantity ?? 0) > 0
+    );
+    const size = keepsSize ? selectedSize : '';
+    setSelectedSize(size);
+    // On a product that has sizes, a colour on its own does not identify a
+    // variant. Picking one arbitrarily made the page claim "Only 2 left"
+    // about a size the shopper had not chosen and could not see.
+    const needsSize = uniqueSizes.length > 0;
+    setSelectedVariant(
+      needsSize && !size
+        ? null
+        : product.variants?.find((v) => v.color === color && (size ? v.size === size : true)) || null
+    );
+
+    if (jumpToItsImage) {
+      // -1 means this colour was never photographed separately, and the shared
+      // default shots are already on screen — moving would be wrong.
+      const target = firstIndexOfColor(gallery, color);
+      if (target >= 0) setSelectedImage(target);
+    }
+  };
+
+  /**
+   * Move the main image, wrapping at either end, and let the colour selector
+   * follow the picture.
+   *
+   * Arrowing out of the Mid Blue shots into the Vintage Dark Blue ones while
+   * the page still says "Color: Mid Blue" is the quiet kind of mismatch that
+   * ends in the wrong item being ordered, so what is on screen leads and the
+   * selection follows it.
+   */
+  const goTo = (index: number) => {
+    if (!gallery.length) return;
+    const next = ((index % gallery.length) + gallery.length) % gallery.length;
+    setSelectedImage(next);
+
+    const shotColor = gallery[next]?.color;
+    if (!shotColor || sameColor(shotColor, selectedColor)) return;
+    // Only follow a colour the customer can actually buy, and use the variant's
+    // spelling of it rather than the image's.
+    const buyable = uniqueColors.find((c) => sameColor(c, shotColor));
+    if (buyable) selectColor(buyable, false);
   };
 
   /**
@@ -197,9 +250,18 @@ export default function ProductDetailClient({ product }: Props) {
             <Box sx={{ position: 'sticky', top: 88 }}>
               {/* Main image */}
               <Box
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  // The arrows are on screen, so the keyboard has to reach them
+                  // too once the frame itself is focused.
+                  if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(selectedImage - 1); }
+                  if (e.key === 'ArrowRight') { e.preventDefault(); goTo(selectedImage + 1); }
+                }}
                 sx={{
                   position: 'relative', paddingTop: '133%', borderRadius: 2,
                   overflow: 'hidden', bgcolor: '#f8f8f8', mb: 1.5,
+                  outline: 'none',
+                  '&:focus-visible': { boxShadow: '0 0 0 2px #c9a84c' },
                 }}
               >
                 {gallery[selectedImage]?.url && (
@@ -227,28 +289,115 @@ export default function ProductDetailClient({ product }: Props) {
                     sx={{ position: 'absolute', top: 12, left: 12, bgcolor: '#d32f2f', color: 'white', fontWeight: 700 }}
                   />
                 )}
+
+                {/* Prev / next.
+                    Stepping through a gallery by aiming at a 64px thumbnail is
+                    real work on a phone; these hand that job to the whole left
+                    and right edge of the picture. They wrap, so the set never
+                    dead-ends. */}
+                {gallery.length > 1 && [
+                  { key: 'prev', step: -1, icon: <ChevronLeft />, edge: { left: 8 }, label: 'Previous image' },
+                  { key: 'next', step: 1, icon: <ChevronRight />, edge: { right: 8 }, label: 'Next image' },
+                ].map((arrow) => (
+                  <IconButton
+                    key={arrow.key}
+                    className="ud-gallery-arrow"
+                    aria-label={arrow.label}
+                    onClick={() => goTo(selectedImage + arrow.step)}
+                    sx={{
+                      position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+                      ...arrow.edge,
+                      width: 40, height: 40,
+                      bgcolor: 'rgba(255,255,255,0.92)',
+                      color: '#1a1a1a',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.12)',
+                      // Always on screen rather than revealed by hover: a phone
+                      // has no hover at all, and a control you have to go
+                      // looking for may as well not be there.
+                      transition: 'background-color 0.2s, box-shadow 0.2s',
+                      '&:hover': { bgcolor: '#fff', boxShadow: '0 3px 14px rgba(0,0,0,0.22)' },
+                      '&:focus-visible': { outline: '2px solid #c9a84c' },
+                    }}
+                  >
+                    {arrow.icon}
+                  </IconButton>
+                ))}
+
+                {/* Position in the set — tells the shopper at a glance that
+                    there is more here than the one photograph. */}
+                {gallery.length > 1 && (
+                  <Box
+                    sx={{
+                      position: 'absolute', bottom: 12, right: 12,
+                      px: 1.25, py: 0.4, borderRadius: 10,
+                      bgcolor: 'rgba(26,26,26,0.65)', color: '#fff',
+                      fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.04em',
+                    }}
+                  >
+                    {selectedImage + 1}/{gallery.length}
+                  </Box>
+                )}
               </Box>
 
-              {/* Thumbnails */}
+              {/* Thumbnails, grouped by colour.
+                  Every shot the product has is here whatever colour is
+                  selected — the runs and their labels are what say which is
+                  which, rather than hiding the rest. */}
               {gallery.length > 1 && (
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  {gallery.map((img, i) => (
-                    <Box
-                      key={img.id}
-                      onClick={() => setSelectedImage(i)}
-                      sx={{
-                        position: 'relative', width: 64, height: 85, borderRadius: 1,
-                        overflow: 'hidden', cursor: 'pointer', bgcolor: '#f8f8f8',
-                        border: '2px solid', borderColor: i === selectedImage ? '#1a1a1a' : 'transparent',
-                        transition: 'border-color 0.2s',
-                        '&:hover': { borderColor: '#888' },
-                      }}
-                    >
-                      {/* 64x85 thumbnail strip — explicit sizes keeps each of
-                          these at a few KB instead of a full-width image. */}
-                      <Image src={img.url} alt="" fill style={{ objectFit: 'cover' }} sizes="64px" />
-                    </Box>
-                  ))}
+                <Box sx={{ display: 'flex', gap: { xs: 2, md: 2.5 }, flexWrap: 'wrap' }}>
+                  {imageGroups.map((group) => {
+                    // One run needs no label: a single-colour product keeps the
+                    // plain strip it has always had.
+                    const labelled = imageGroups.length > 1;
+                    const isChosen = sameColor(group.color, selectedColor);
+                    // Untagged shots belong to every colour, so they are never
+                    // the "other" colour and never dimmed.
+                    const muted = labelled && !!selectedColor && !!group.color && !isChosen;
+                    return (
+                      <Box key={group.color ?? '__default'}>
+                        {labelled && (
+                          <Typography
+                            sx={{
+                              display: 'block', mb: 0.75, pl: 0.75,
+                              fontSize: '0.62rem', fontWeight: 700,
+                              letterSpacing: '0.1em', textTransform: 'uppercase',
+                              whiteSpace: 'nowrap',
+                              color: isChosen ? '#1a1a1a' : '#9a9a9a',
+                              borderLeft: '2px solid',
+                              borderColor: isChosen ? '#c9a84c' : 'transparent',
+                              transition: 'color 0.2s, border-color 0.2s',
+                            }}
+                          >
+                            {group.color ?? 'All colours'}
+                          </Typography>
+                        )}
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          {group.images.map((img: any, i: number) => {
+                            const index = group.indices[i];
+                            return (
+                              <Box
+                                key={img.id ?? img.url}
+                                onClick={() => goTo(index)}
+                                sx={{
+                                  position: 'relative', width: 64, height: 85, borderRadius: 1,
+                                  overflow: 'hidden', cursor: 'pointer', bgcolor: '#f8f8f8',
+                                  border: '2px solid',
+                                  borderColor: index === selectedImage ? '#1a1a1a' : 'transparent',
+                                  opacity: muted ? 0.5 : 1,
+                                  transition: 'border-color 0.2s, opacity 0.2s',
+                                  '&:hover': { borderColor: '#888', opacity: 1 },
+                                }}
+                              >
+                                {/* 64x85 thumbnail strip — explicit sizes keeps each of
+                                    these at a few KB instead of a full-width image. */}
+                                <Image src={img.url} alt="" fill style={{ objectFit: 'cover' }} sizes="64px" />
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                      </Box>
+                    );
+                  })}
                 </Box>
               )}
             </Box>
@@ -321,7 +470,7 @@ export default function ProductDetailClient({ product }: Props) {
                           wide
                           selected={selectedColor === color}
                           disabled={soldOut}
-                          onClick={() => color && handleColorSelect(color)}
+                          onClick={() => color && selectColor(color)}
                         />
                       );
                     })}
