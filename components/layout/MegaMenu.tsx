@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import { ExpandMore, ExpandLess, ArrowForward, GridView } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
+import { NAV_LAYOUT_DEFAULTS, type NavLayout } from '../../lib/navLayout';
 
 // ── Types ─────────────────────────────────────────────────────────
 export interface NavChild {
@@ -32,6 +33,8 @@ interface MegaMenuProps {
   /** Mobile only — pass true when the mobile drawer is open */
   mobileMode?: boolean;
   onLinkClick?: () => void;
+  /** Admin-managed layout; omitted falls back to the shipped defaults. */
+  layout?: NavLayout;
 }
 
 // ── Quick-link chips at the top of the mega panel ─────────────────
@@ -65,8 +68,9 @@ export const resolveQuickLinks = (links?: QuickLink[] | null): QuickLink[] =>
   links && links.length ? links : DEFAULT_QUICK_LINKS;
 
 // ── Desktop MegaMenu ──────────────────────────────────────────────
-export function MegaMenuDesktop({ categories, quickLinks, onLinkClick }: MegaMenuProps) {
+export function MegaMenuDesktop({ categories, quickLinks, onLinkClick, layout }: MegaMenuProps) {
   const links = quickLinks ?? [];
+  const L = (layout ?? NAV_LAYOUT_DEFAULTS).desktop;
   const [open, setOpen]             = useState(false);
   const [hovered, setHovered]       = useState<string | null>(null);
   const closeTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -151,7 +155,7 @@ export function MegaMenuDesktop({ categories, quickLinks, onLinkClick }: MegaMen
             onMouseLeave={closeMenu}
           >
             <Container maxWidth="xl">
-              <Box sx={{ display: 'grid', gridTemplateColumns: '220px 1fr auto', gap: 0, height: '70vh', minHeight: 420, overflow: 'hidden' }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: `${L.sidebarWidth}px 1fr auto`, gap: 0, height: `${L.panelHeight}vh`, minHeight: 420, overflow: 'hidden' }}>
 
                 {/* ── Left sidebar: all categories ─────────── */}
                 <Box sx={{
@@ -177,7 +181,7 @@ export function MegaMenuDesktop({ categories, quickLinks, onLinkClick }: MegaMen
                         transition: 'all 0.15s',
                       }}
                     >
-                      <ArrowForward sx={{ fontSize: 13, color: '#b0a090' }} />
+                      {L.quickLinkIcon && <ArrowForward sx={{ fontSize: 13, color: '#b0a090' }} />}
                       {q.label}
                     </Box>
                   ))}
@@ -451,14 +455,22 @@ export function MegaMenuDesktop({ categories, quickLinks, onLinkClick }: MegaMen
  * thumbnail and says how many subcategories sit under it, so the menu can be
  * scanned instead of read.
  */
-export function MegaMenuMobile({ categories, quickLinks, onLinkClick }: MegaMenuProps) {
+export function MegaMenuMobile({ categories, quickLinks, onLinkClick, layout }: MegaMenuProps) {
   const [expanded, setExpanded] = useState<string | false>(false);
   const links = quickLinks ?? [];
+  const L = (layout ?? NAV_LAYOUT_DEFAULTS).mobile;
+
+  // Centred labels have no shared left edge to hold, so the rows centre their
+  // whole content instead; left-aligned rows keep the 16px gutter that the
+  // drawer's other blocks use.
+  const centred = L.align === 'center';
+  const rowJustify = centred ? 'center' : 'flex-start';
+  const showThumb = L.thumbWidth > 0;
 
   return (
     <Box>
       {/* Quick links as chips — three taps' worth of intent, one row. */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, px: 2, pb: 1.5 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: rowJustify, gap: 0.75, px: 2, pb: 1.5 }}>
         {links.map(q => (
           <Box
             key={q.id || q.url}
@@ -495,14 +507,15 @@ export function MegaMenuMobile({ categories, quickLinks, onLinkClick }: MegaMenu
                 onClick={onLinkClick}
                 sx={{
                   flex: 1, minWidth: 0,
-                  display: 'flex', alignItems: 'center', gap: 1.5,
-                  px: 2, py: 1.25,
+                  display: 'flex', alignItems: 'center', justifyContent: rowJustify, gap: 1.5,
+                  px: 2, py: L.rowPadding,
                   textDecoration: 'none', color: 'inherit',
                   '&:active': { bgcolor: '#fafafa' },
                 }}
               >
+                {showThumb && (
                 <Box sx={{
-                  width: 44, height: 52, borderRadius: 1, flexShrink: 0,
+                  width: L.thumbWidth, height: L.thumbHeight, borderRadius: 1, flexShrink: 0,
                   overflow: 'hidden', bgcolor: '#f3f1ee',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
@@ -523,8 +536,9 @@ export function MegaMenuMobile({ categories, quickLinks, onLinkClick }: MegaMenu
                     </Typography>
                   )}
                 </Box>
+                )}
 
-                <Box sx={{ minWidth: 0 }}>
+                <Box sx={{ minWidth: 0, textAlign: centred ? 'center' : 'left' }}>
                   <Typography sx={{
                     fontSize: '0.9rem', fontWeight: 700, color: '#1a1a1a',
                     lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -549,7 +563,7 @@ export function MegaMenuMobile({ categories, quickLinks, onLinkClick }: MegaMenu
             </Box>
 
             <Collapse in={isOpen} timeout="auto" unmountOnExit>
-              <Box sx={{ pl: 2, pr: 2, pb: 1.5, display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+              <Box sx={{ pl: 2, pr: 2, pb: 1.5, display: 'flex', flexWrap: 'wrap', justifyContent: rowJustify, gap: 0.75 }}>
                 <Box
                   component={Link}
                   href={`/category/${cat.slug}`}
@@ -589,15 +603,18 @@ export function MegaMenuMobile({ categories, quickLinks, onLinkClick }: MegaMenu
         component={Link}
         href="/categories"
         onClick={onLinkClick}
-        sx={{ py: 1.4, px: 2, color: 'inherit', textDecoration: 'none' }}
+        sx={{ py: 1.4, px: 2, justifyContent: rowJustify, color: 'inherit', textDecoration: 'none' }}
       >
-        {/* Icon trails the label so the text sits on the same 16px edge as the
-            links above it — a leading icon pushed it to 39px, matching nothing. */}
+        {/* Default is 'after': a leading icon pushed this label to 39px from the
+            drawer edge, lining up with nothing — the links above sit at 16px.
+            Trailing, it reads as an affordance instead of shifting the text. */}
+        {L.viewAllIcon === 'before' && <GridView sx={{ fontSize: 15, color: '#aaa', mr: 1 }} />}
         <ListItemText
           primary="View All Categories"
           primaryTypographyProps={{ fontSize: '0.82rem', color: '#888', fontWeight: 600 }}
+          sx={{ flex: centred ? '0 1 auto' : '1 1 auto', textAlign: centred ? 'center' : 'left' }}
         />
-        <GridView sx={{ fontSize: 15, color: '#aaa', ml: 1 }} />
+        {L.viewAllIcon === 'after' && <GridView sx={{ fontSize: 15, color: '#aaa', ml: 1 }} />}
       </ListItemButton>
     </Box>
   );

@@ -3,15 +3,20 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Box, Typography, Card, CardContent, TextField, Button, Divider,
   Grid, CircularProgress, Tabs, Tab, Paper, Chip, LinearProgress,
+  Slider, ToggleButton, ToggleButtonGroup, Stack,
 } from '@mui/material';
 import {
-  CloudUpload, CheckCircle, Image as ImageIcon, Delete,
+  CloudUpload, CheckCircle, Image as ImageIcon, Delete, GridView,
 } from '@mui/icons-material';
 import Image from 'next/image';
 import { settingsApi } from '../../../../services/api.service';
 import api from '../../../../lib/axios';
 import { toast } from 'react-hot-toast';
 import { useImageCropper } from '../../../../components/common/ImageCropperProvider';
+import {
+  NAV_LAYOUT_DEFAULTS, NAV_LAYOUT_RANGES, NAV_SETTING_KEYS, resolveNavLayout,
+  type NavLayout, type NavRangeKey,
+} from '../../../../lib/navLayout';
 
 interface TabPanelProps { children?: React.ReactNode; index: number; value: number; }
 const TabPanel = ({ children, value, index }: TabPanelProps) => (
@@ -222,6 +227,170 @@ function LogoUploader({ value, onChange }: LogoUploaderProps) {
   );
 }
 
+// ── Navigation layout controls ─────────────────────────────────────
+
+/**
+ * A bounded numeric setting.
+ *
+ * A slider rather than a text box, because every one of these values has a
+ * range outside which the storefront clamps anyway — a control that cannot
+ * express an invalid value is easier to trust than one that silently corrects
+ * you after saving.
+ */
+function RangeRow({ label, help, rangeKey, value, onChange }: {
+  label: string;
+  help?: string;
+  rangeKey: NavRangeKey;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const r = NAV_LAYOUT_RANGES[rangeKey];
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 2 }}>
+        <Typography sx={{ fontSize: '0.82rem', fontWeight: 600 }}>{label}</Typography>
+        <Typography sx={{ fontSize: '0.78rem', fontFamily: 'monospace', color: '#666' }}>
+          {value}{r.unit === '×8px' ? '' : ` ${r.unit}`}
+          {r.unit === '×8px' && <span style={{ color: '#aaa' }}>{` (${Math.round(value * 8)}px)`}</span>}
+        </Typography>
+      </Box>
+      <Slider
+        size="small"
+        value={value}
+        min={r.min}
+        max={r.max}
+        step={r.step}
+        onChange={(_, v) => onChange(v as number)}
+        sx={{ color: '#1a1a1a', mt: 0.5 }}
+      />
+      {help && <Typography sx={{ fontSize: '0.72rem', color: '#999', mt: -0.5 }}>{help}</Typography>}
+    </Box>
+  );
+}
+
+function ChoiceRow<T extends string>({ label, help, value, options, onChange }: {
+  label: string;
+  help?: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <Box>
+      <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, mb: 0.75 }}>{label}</Typography>
+      <ToggleButtonGroup
+        exclusive
+        size="small"
+        value={value}
+        onChange={(_, v) => { if (v) onChange(v as T); }}
+        sx={{
+          '& .MuiToggleButton-root': { textTransform: 'none', fontSize: '0.76rem', px: 1.5, py: 0.5 },
+          '& .Mui-selected': { bgcolor: '#1a1a1a !important', color: '#fff !important' },
+        }}
+      >
+        {options.map(o => <ToggleButton key={o.value} value={o.value}>{o.label}</ToggleButton>)}
+      </ToggleButtonGroup>
+      {help && <Typography sx={{ fontSize: '0.72rem', color: '#999', mt: 0.75 }}>{help}</Typography>}
+    </Box>
+  );
+}
+
+/**
+ * A miniature of the real drawer, at the real width, driven by the same
+ * resolved layout the storefront uses. Values are clamped by
+ * `resolveNavLayout` before they reach either, so what is drawn here is what
+ * ships — including when the admin drags a slider to its limit.
+ */
+function NavDrawerPreview({ layout }: { layout: NavLayout }) {
+  const m = layout.mobile;
+  const centred = m.align === 'center';
+  const justify = centred ? 'center' : 'flex-start';
+  const textAlign = centred ? 'center' : 'left';
+  const icon = <GridView sx={{ fontSize: 13, color: '#aaa' }} />;
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <Typography sx={{ fontSize: '0.68rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#999' }}>
+        Mobile drawer preview
+      </Typography>
+      <Box sx={{
+        width: m.drawerWidth, maxWidth: '100%',
+        border: '1px solid #e4e4e4', borderRadius: 1, overflow: 'hidden',
+        bgcolor: '#fff', fontFamily: 'inherit',
+      }}>
+        {/* header */}
+        <Box sx={{ px: 2.5, py: 1.5, borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 800, letterSpacing: '0.15em', fontSize: '0.8rem' }}>
+            THE UNIQUE DRESSUP
+          </Typography>
+        </Box>
+        {/* gender tabs */}
+        <Box sx={{ display: 'flex', borderBottom: '1px solid #eee' }}>
+          {['WOMEN', 'MEN'].map((g, i) => (
+            <Box key={g} sx={{
+              flex: 1, textAlign: 'center', py: 0.9, fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.15em',
+              color: i === 0 ? '#1a1a1a' : '#aaa',
+              borderBottom: i === 0 ? '2px solid #1a1a1a' : '2px solid transparent',
+            }}>{g}</Box>
+          ))}
+        </Box>
+        {/* top links */}
+        {['New In', 'Collections', 'Sale', 'Blog'].map(l => (
+          <Box key={l} sx={{ px: 2, py: 0.85, fontSize: '0.8rem', fontWeight: 500, color: '#1a1a1a', textAlign }}>{l}</Box>
+        ))}
+        <Divider sx={{ my: 0.5 }} />
+        <Box sx={{ px: 2, py: 0.6, textAlign }}>
+          <Typography sx={{ fontSize: '0.55rem', letterSpacing: '0.15em', color: '#aaa', textTransform: 'uppercase' }}>
+            Shop by Category
+          </Typography>
+        </Box>
+        {/* chips */}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: justify, gap: 0.5, px: 2, pb: 1.2 }}>
+          {['Shop All', 'New Arrivals', 'Best Sellers'].map(c => (
+            <Box key={c} sx={{
+              px: 1.2, py: 0.4, border: '1px solid #e6e2dc', borderRadius: 5,
+              fontSize: '0.64rem', fontWeight: 700, color: '#6b5f4e', bgcolor: '#fdfcfa',
+            }}>{c}</Box>
+          ))}
+        </Box>
+        <Divider />
+        {/* category rows */}
+        {['DENIM', 'Pants and Trousers'].map(c => (
+          <Box key={c} sx={{
+            display: 'flex', alignItems: 'center', justifyContent: justify, gap: 1.5,
+            px: 2, py: m.rowPadding, borderBottom: '1px solid #f4f4f4',
+          }}>
+            {m.thumbWidth > 0 && (
+              <Box sx={{
+                width: m.thumbWidth, height: m.thumbHeight, borderRadius: 1, flexShrink: 0, bgcolor: '#f3f1ee',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'var(--font-playfair)', fontSize: '0.9rem', fontWeight: 700, color: '#c9b79a',
+              }}>{c.charAt(0)}</Box>
+            )}
+            <Box sx={{ minWidth: 0, textAlign }}>
+              <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {c}
+              </Typography>
+              <Typography sx={{ fontSize: '0.62rem', color: '#9a9a9a' }}>Shop now</Typography>
+            </Box>
+          </Box>
+        ))}
+        {/* view all */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: justify, px: 2, py: 1.1 }}>
+          {m.viewAllIcon === 'before' && <Box sx={{ mr: 1, display: 'flex' }}>{icon}</Box>}
+          <Typography sx={{ fontSize: '0.75rem', color: '#888', fontWeight: 600, flex: centred ? '0 1 auto' : '1 1 auto', textAlign }}>
+            View All Categories
+          </Typography>
+          {m.viewAllIcon === 'after' && <Box sx={{ ml: 1, display: 'flex' }}>{icon}</Box>}
+        </Box>
+      </Box>
+      <Typography sx={{ fontSize: '0.7rem', color: '#999' }}>
+        Drawn at the real drawer width ({m.drawerWidth}px). Type sizes are slightly reduced to fit this card.
+      </Typography>
+    </Box>
+  );
+}
+
 // ── Main page ──────────────────────────────────────────────────────
 export default function SettingsPage() {
   const [tab, setTab] = useState(0);
@@ -260,6 +429,24 @@ export default function SettingsPage() {
   const socialKeys = ['instagram_url', 'facebook_url', 'twitter_url', 'youtube_url', 'pinterest_url'];
   const homepageKeys = ['announcement_text'];
   const analyticsKeys = ['google_analytics_id', 'facebook_pixel_id'];
+  const navKeys = [...NAV_SETTING_KEYS];
+
+  // Resolved the same way the storefront resolves it, so the preview below
+  // cannot drift from what shoppers get.
+  const navLayout = resolveNavLayout(settings);
+  const setNav = (key: string, value: string | number | boolean) => set(key, String(value));
+  const resetNav = () => {
+    const d = NAV_LAYOUT_DEFAULTS;
+    setNav('nav_mobile_drawer_width',    d.mobile.drawerWidth);
+    setNav('nav_mobile_align',           d.mobile.align);
+    setNav('nav_mobile_viewall_icon',    d.mobile.viewAllIcon);
+    setNav('nav_mobile_thumb_width',     d.mobile.thumbWidth);
+    setNav('nav_mobile_thumb_height',    d.mobile.thumbHeight);
+    setNav('nav_mobile_row_padding',     d.mobile.rowPadding);
+    setNav('nav_desktop_panel_height',   d.desktop.panelHeight);
+    setNav('nav_desktop_sidebar_width',  d.desktop.sidebarWidth);
+    setNav('nav_desktop_quicklink_icon', d.desktop.quickLinkIcon);
+  };
 
   const SaveBtn = ({ keys }: { keys: string[] }) => (
     <Button variant="contained" onClick={() => save(keys)} disabled={saving}
@@ -280,6 +467,7 @@ export default function SettingsPage() {
             <Tab label="Social" />
             <Tab label="Homepage" />
             <Tab label="Analytics" />
+            <Tab label="Navigation" />
           </Tabs>
 
           <Box sx={{ p: 3 }}>
@@ -397,6 +585,118 @@ export default function SettingsPage() {
                 </Grid>
               </Grid>
               <SaveBtn keys={analyticsKeys} />
+            </TabPanel>
+
+            {/* Navigation */}
+            <TabPanel value={tab} index={5}>
+              <Typography sx={{ fontSize: '0.82rem', color: '#666', mb: 3, maxWidth: '62ch' }}>
+                Layout of the menu on both screen sizes. Changes apply to the whole
+                storefront on the next page load — nothing here affects which links or
+                categories appear, which is managed under Menu Links and Categories.
+              </Typography>
+
+              <Grid container spacing={4}>
+                {/* ── Mobile ── */}
+                <Grid item xs={12} md={6}>
+                  <Paper elevation={0} sx={{ border: '1px solid #e8e8e8', borderRadius: 2, p: 2.5 }}>
+                    <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#1a1a1a', mb: 2.5 }}>
+                      Mobile drawer
+                    </Typography>
+                    <Stack spacing={2.5}>
+                      <RangeRow
+                        label="Drawer width"
+                        rangeKey="drawerWidth"
+                        value={navLayout.mobile.drawerWidth}
+                        onChange={v => setNav('nav_mobile_drawer_width', v)}
+                        help="How far the panel slides in from the left."
+                      />
+                      <ChoiceRow
+                        label="Label alignment"
+                        value={navLayout.mobile.align}
+                        options={[{ value: 'left' as const, label: 'Left' }, { value: 'center' as const, label: 'Centre' }]}
+                        onChange={v => setNav('nav_mobile_align', v)}
+                        help="Left keeps every label on one edge and is faster to scan."
+                      />
+                      <ChoiceRow
+                        label={'"View All Categories" icon'}
+                        value={navLayout.mobile.viewAllIcon}
+                        options={[
+                          { value: 'before' as const, label: 'Before text' },
+                          { value: 'after'  as const, label: 'After text' },
+                          { value: 'hidden' as const, label: 'Hidden' },
+                        ]}
+                        onChange={v => setNav('nav_mobile_viewall_icon', v)}
+                        help="Before the text pushes the label off the drawer's shared left edge."
+                      />
+                      <RangeRow
+                        label="Category thumbnail width"
+                        rangeKey="thumbWidth"
+                        value={navLayout.mobile.thumbWidth}
+                        onChange={v => setNav('nav_mobile_thumb_width', v)}
+                        help="Set to 0 to remove the thumbnails and show names only."
+                      />
+                      <RangeRow
+                        label="Category thumbnail height"
+                        rangeKey="thumbHeight"
+                        value={navLayout.mobile.thumbHeight}
+                        onChange={v => setNav('nav_mobile_thumb_height', v)}
+                      />
+                      <RangeRow
+                        label="Category row padding"
+                        rangeKey="rowPadding"
+                        value={navLayout.mobile.rowPadding}
+                        onChange={v => setNav('nav_mobile_row_padding', v)}
+                        help="Vertical breathing room above and below each category row."
+                      />
+                    </Stack>
+                  </Paper>
+
+                  <Paper elevation={0} sx={{ border: '1px solid #e8e8e8', borderRadius: 2, p: 2.5, mt: 3 }}>
+                    <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#1a1a1a', mb: 2.5 }}>
+                      Desktop mega menu
+                    </Typography>
+                    <Stack spacing={2.5}>
+                      <RangeRow
+                        label="Panel height"
+                        rangeKey="panelHeight"
+                        value={navLayout.desktop.panelHeight}
+                        onChange={v => setNav('nav_desktop_panel_height', v)}
+                        help="Share of the screen height the open Shop panel covers."
+                      />
+                      <RangeRow
+                        label="Sidebar width"
+                        rangeKey="sidebarWidth"
+                        value={navLayout.desktop.sidebarWidth}
+                        onChange={v => setNav('nav_desktop_sidebar_width', v)}
+                        help="Left column holding quick links and the category list."
+                      />
+                      <ChoiceRow
+                        label="Quick-link arrow"
+                        value={navLayout.desktop.quickLinkIcon ? 'show' : 'hide'}
+                        options={[{ value: 'show' as const, label: 'Show' }, { value: 'hide' as const, label: 'Hide' }]}
+                        onChange={v => setNav('nav_desktop_quicklink_icon', v === 'show')}
+                      />
+                    </Stack>
+                  </Paper>
+                </Grid>
+
+                {/* ── Preview ── */}
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ position: 'sticky', top: 24 }}>
+                    <NavDrawerPreview layout={navLayout} />
+                  </Box>
+                </Grid>
+              </Grid>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <SaveBtn keys={navKeys} />
+                <Button onClick={resetNav} disabled={saving} sx={{ mt: 3, color: '#666', textTransform: 'none' }}>
+                  Reset to defaults
+                </Button>
+              </Box>
+              <Typography sx={{ fontSize: '0.72rem', color: '#999', mt: 1.5 }}>
+                Reset only fills the fields — press Save Settings to apply it.
+              </Typography>
             </TabPanel>
           </Box>
         </CardContent>

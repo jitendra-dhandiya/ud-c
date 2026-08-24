@@ -24,6 +24,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { productApi } from '../../services/api.service';
 import { MegaMenuDesktop, MegaMenuMobile, resolveQuickLinks, type NavCategory, type QuickLink } from './MegaMenu';
 import { visibleNavCategories } from '../../lib/navMenu';
+import { resolveNavLayout } from '../../lib/navLayout';
 
 /**
  * Intrinsic aspect ratio of the brand lockup (public/logo-mark.png, 1092x240).
@@ -166,6 +167,12 @@ export default function Navbar({ settings = {}, navCategories = [], quickLinks =
   };
 
   const genderToggleEnabled = settings.gender_toggle_enabled !== 'false';
+
+  // Admin-managed drawer and mega-panel geometry. Derived, never stored: the
+  // settings object is re-fetched on every request, so a saved change shows up
+  // on the next page load without anything here to invalidate.
+  const navLayout = useMemo(() => resolveNavLayout(settings), [settings]);
+  const drawerCentred = navLayout.mobile.align === 'center';
 
   return (
     <>
@@ -330,7 +337,7 @@ export default function Navbar({ settings = {}, navCategories = [], quickLinks =
 
                 {/* Shop sits second, where shoppers look for it — not after Blog. */}
                 {filteredNavCategories.length > 0 && (
-                  <MegaMenuDesktop categories={filteredNavCategories} quickLinks={filteredQuickLinks} />
+                  <MegaMenuDesktop categories={filteredNavCategories} quickLinks={filteredQuickLinks} layout={navLayout} />
                 )}
 
                 {NAV_LINKS_AFTER.map((link) => (
@@ -553,7 +560,7 @@ export default function Navbar({ settings = {}, navCategories = [], quickLinks =
 
       {/* Mobile Drawer */}
       <Drawer anchor="left" open={mobileOpen} onClose={() => setMobileOpen(false)}>
-        <Box sx={{ width: 280 }}>
+        <Box sx={{ width: navLayout.mobile.drawerWidth }}>
           <Box sx={{ px: 2.5, py: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
             {settings.logo_url ? (
               <Box sx={{ position: 'relative', height: 34, aspectRatio: LOGO_ASPECT, flexShrink: 1, minWidth: 0, maxWidth: '70%' }}>
@@ -611,18 +618,19 @@ export default function Navbar({ settings = {}, navCategories = [], quickLinks =
                 <ListItemText
                   primary={link.label}
                   primaryTypographyProps={{ fontWeight: 500, fontSize: '0.9rem', letterSpacing: '0.04em', color: '#1a1a1a' }}
+                  sx={{ textAlign: drawerCentred ? 'center' : 'left' }}
                 />
               </ListItem>
             ))}
             {filteredNavCategories.length > 0 && (
               <>
                 <Divider sx={{ my: 0.5 }} />
-                <Box sx={{ px: 2, py: 0.75 }}>
+                <Box sx={{ px: 2, py: 0.75, textAlign: drawerCentred ? 'center' : 'left' }}>
                   <Typography variant="overline" sx={{ fontSize: '0.6rem', letterSpacing: '0.15em', color: '#aaa' }}>
                     Shop by Category
                   </Typography>
                 </Box>
-                <MegaMenuMobile categories={filteredNavCategories} quickLinks={filteredQuickLinks} onLinkClick={() => setMobileOpen(false)} />
+                <MegaMenuMobile categories={filteredNavCategories} quickLinks={filteredQuickLinks} layout={navLayout} onLinkClick={() => setMobileOpen(false)} />
               </>
             )}
             <Divider sx={{ my: 1 }} />
@@ -630,15 +638,15 @@ export default function Navbar({ settings = {}, navCategories = [], quickLinks =
               <>
                 <ListItem component={Link} href="/account/orders" onClick={() => setMobileOpen(false)}
                   sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { bgcolor: '#f5f5f5' } }}>
-                  <ListItemText primary="My Orders" primaryTypographyProps={{ color: '#1a1a1a', fontWeight: 500, fontSize: '0.9rem' }} />
+                  <ListItemText primary="My Orders" primaryTypographyProps={{ color: '#1a1a1a', fontWeight: 500, fontSize: '0.9rem' }} sx={{ textAlign: drawerCentred ? 'center' : 'left' }} />
                 </ListItem>
                 <ListItem component={Link} href="/account/profile" onClick={() => setMobileOpen(false)}
                   sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { bgcolor: '#f5f5f5' } }}>
-                  <ListItemText primary="Profile" primaryTypographyProps={{ color: '#1a1a1a', fontWeight: 500, fontSize: '0.9rem' }} />
+                  <ListItemText primary="Profile" primaryTypographyProps={{ color: '#1a1a1a', fontWeight: 500, fontSize: '0.9rem' }} sx={{ textAlign: drawerCentred ? 'center' : 'left' }} />
                 </ListItem>
                 <ListItem onClick={() => { setMobileOpen(false); setLogoutConfirm(true); }}
                   sx={{ '&:hover': { bgcolor: '#fff5f5' }, cursor: 'pointer' }}>
-                  <ListItemText primary="Logout" primaryTypographyProps={{ color: 'error.main', fontWeight: 500, fontSize: '0.9rem' }} />
+                  <ListItemText primary="Logout" primaryTypographyProps={{ color: 'error.main', fontWeight: 500, fontSize: '0.9rem' }} sx={{ textAlign: drawerCentred ? 'center' : 'left' }} />
                 </ListItem>
               </>
             ) : (
@@ -647,13 +655,13 @@ export default function Navbar({ settings = {}, navCategories = [], quickLinks =
                   onClick={() => { setMobileOpen(false); dispatch(openLoginModal()); }}
                   sx={{ '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
                 >
-                  <ListItemText primary="Login" />
+                  <ListItemText primary="Login" sx={{ textAlign: drawerCentred ? 'center' : 'left' }} />
                 </ListItem>
                 <ListItem
                   onClick={() => { setMobileOpen(false); dispatch(openLoginModal()); }}
                   sx={{ '&:hover': { bgcolor: '#f5f5f5' }, cursor: 'pointer' }}
                 >
-                  <ListItemText primary="Register" />
+                  <ListItemText primary="Register" sx={{ textAlign: drawerCentred ? 'center' : 'left' }} />
                 </ListItem>
               </>
             )}
