@@ -591,11 +591,13 @@ export function MegaMenuMobile({ categories, quickLinks, onLinkClick }: MegaMenu
         onClick={onLinkClick}
         sx={{ py: 1.4, px: 2, color: 'inherit', textDecoration: 'none' }}
       >
-        <GridView sx={{ fontSize: 15, color: '#aaa', mr: 1 }} />
+        {/* Icon trails the label so the text sits on the same 16px edge as the
+            links above it — a leading icon pushed it to 39px, matching nothing. */}
         <ListItemText
           primary="View All Categories"
           primaryTypographyProps={{ fontSize: '0.82rem', color: '#888', fontWeight: 600 }}
         />
+        <GridView sx={{ fontSize: 15, color: '#aaa', ml: 1 }} />
       </ListItemButton>
     </Box>
   );
