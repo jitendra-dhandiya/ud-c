@@ -3,21 +3,42 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Button, Card, CardContent, Stack, TextField, MenuItem,
   Switch, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
-  Chip, Alert, Skeleton, FormControlLabel,
+  Chip, Alert, Skeleton, FormControlLabel, Tabs, Tab,
 } from '@mui/material';
 import { Add, Edit, Delete, Link as LinkIcon, OpenInNew } from '@mui/icons-material';
 import { toast } from 'react-hot-toast';
 import { navMenuApi } from '../../../../services/api.service';
+import { HEADER_BEFORE, HEADER_AFTER, defaultsFor } from '../../../../lib/headerLinks';
 
 /**
- * The quick links across the top of the Shop mega menu.
+ * Every editable link menu in the site chrome.
  *
- * These are filters, not categories, which is why they never lived in the
- * category table and used to be a constant in the storefront bundle. Until a
- * link is created here the storefront renders its own four defaults, so the
- * menu is never empty — "Import the default links" copies those in to make
- * them editable.
+ * All three share one table, told apart by `position`. Until a link is created
+ * at a position the storefront renders its own built-in defaults, so no menu is
+ * ever left empty — "Import the default links" copies those in to make them
+ * editable, and is offered only while the position has nothing in it.
  */
+
+const MENUS = [
+  {
+    value: 'quick_links',
+    label: 'Shop menu chips',
+    caption: 'The chips across the top of the Shop mega menu, and under "Shop by Category" in the mobile drawer',
+    defaults: 'Shop All, New Arrivals, Best Sellers and On Sale',
+  },
+  {
+    value: HEADER_BEFORE,
+    label: 'Header — left of Shop',
+    caption: 'Bar links to the left of the Shop menu. In the mobile drawer these lead the list',
+    defaults: 'New In',
+  },
+  {
+    value: HEADER_AFTER,
+    label: 'Header — right of Shop',
+    caption: 'Bar links to the right of the Shop menu. In the mobile drawer they follow the left-of-Shop links',
+    defaults: 'Collections, Sale and Blog',
+  },
+] as const;
 
 interface MenuLink {
   id: string;
@@ -45,11 +66,13 @@ const URL_PRESETS = [
   { label: 'Featured', url: '/shop?isFeatured=true' },
   { label: 'Collections', url: '/collections' },
   { label: 'All categories', url: '/categories' },
+  { label: 'Blog', url: '/blog' },
 ];
 
 const EMPTY = { label: '', url: '', gender: 'ALL', sortOrder: 0, isActive: true };
 
 export default function MenuLinksPage() {
+  const [menu, setMenu] = useState<string>('quick_links');
   const [links, setLinks] = useState<MenuLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -63,14 +86,14 @@ export default function MenuLinksPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await navMenuApi.getAll('quick_links');
+      const { data } = await navMenuApi.getAll(menu);
       setLinks((data as any).data || []);
     } catch {
       toast.error('Failed to load menu links');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [menu]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -103,7 +126,7 @@ export default function MenuLinksPage() {
         await navMenuApi.update(editingId, form);
         toast.success('Link updated');
       } else {
-        await navMenuApi.create(form);
+        await navMenuApi.create({ ...form, position: menu });
         toast.success('Link added');
       }
       setDialog(false);
@@ -137,15 +160,38 @@ export default function MenuLinksPage() {
     }
   };
 
+  /**
+   * The server's import endpoint only knows the quick links, so for the header
+   * positions the defaults are created here from the same list the storefront
+   * falls back to. Offered only while the position is empty, which is what
+   * keeps it from producing a second set.
+   */
   const importDefaults = async () => {
     try {
-      await navMenuApi.importDefaults('quick_links');
+      if (menu === 'quick_links') {
+        await navMenuApi.importDefaults(menu);
+      } else {
+        const seed = defaultsFor(menu);
+        if (!seed.length) { toast.error('No defaults for this menu'); return; }
+        for (let i = 0; i < seed.length; i++) {
+          await navMenuApi.create({
+            label: seed[i].label,
+            url: seed[i].href,
+            position: menu,
+            gender: 'ALL',
+            sortOrder: i * 10,   // gaps, so a link can be slotted between two
+            isActive: true,
+          });
+        }
+      }
       toast.success('Default links imported — edit them freely now');
       load();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Failed to import');
     }
   };
+
+  const current = MENUS.find(m => m.value === menu) ?? MENUS[0];
 
   const dirtyOrders = Object.entries(orderEdits).filter(([id, value]) => {
     const link = links.find(l => l.id === id);
@@ -177,7 +223,7 @@ export default function MenuLinksPage() {
         <Box>
           <Typography variant="h5" fontWeight={800}>Menu Links</Typography>
           <Typography variant="caption" color="text.secondary">
-            The quick links across the top of the Shop mega menu
+            {current.caption}
           </Typography>
         </Box>
         <Button
@@ -190,15 +236,25 @@ export default function MenuLinksPage() {
         </Button>
       </Box>
 
+      <Tabs
+        value={menu}
+        onChange={(_, v) => { setMenu(v); setOrderEdits({}); }}
+        variant="scrollable"
+        scrollButtons="auto"
+        sx={{ mb: 3, borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { textTransform: 'none', fontWeight: 700 } }}
+      >
+        {MENUS.map(m => <Tab key={m.value} value={m.value} label={m.label} />)}
+      </Tabs>
+
       {!loading && links.length === 0 && (
         <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }} action={
           <Button size="small" onClick={importDefaults} sx={{ fontWeight: 700 }}>
             Import the default links
           </Button>
         }>
-          <strong>The menu is currently using the built-in links</strong> — Shop All, New Arrivals,
-          Best Sellers and On Sale. Import them to edit, reorder or replace them, or add your own
-          from scratch. Either way the menu is never left empty.
+          <strong>This menu is currently using the built-in links</strong> — {current.defaults}.
+          Import them to edit, reorder or replace them, or add your own from scratch. Either way
+          the menu is never left empty.
         </Alert>
       )}
 

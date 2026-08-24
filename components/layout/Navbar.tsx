@@ -25,6 +25,9 @@ import { productApi } from '../../services/api.service';
 import { MegaMenuDesktop, MegaMenuMobile, resolveQuickLinks, type NavCategory, type QuickLink } from './MegaMenu';
 import { visibleNavCategories } from '../../lib/navMenu';
 import { resolveNavLayout } from '../../lib/navLayout';
+import {
+  HEADER_BEFORE, HEADER_AFTER, fromApi, resolveHeaderLinks, visibleHeaderLinks,
+} from '../../lib/headerLinks';
 
 /**
  * Intrinsic aspect ratio of the brand lockup (public/logo-mark.png, 1092x240).
@@ -45,34 +48,28 @@ import { resolveNavLayout } from '../../lib/navLayout';
  */
 const LOGO_ASPECT = '1092 / 240';
 
-/**
- * The fixed links either side of the Shop mega menu.
- *
- * "Shop" is deliberately absent: the mega menu's own trigger is labelled Shop
- * and links to /shop, so listing it here as well put two SHOP entries in the
- * bar — one that opened the menu and one that did not.
- */
-const NAV_LINKS_BEFORE = [
-  { label: 'New In', href: '/shop?isNewArrival=true' },
-];
-
-const NAV_LINKS_AFTER = [
-  { label: 'Collections', href: '/collections' },
-  { label: 'Sale', href: '/shop?discount=true' },
-  { label: 'Blog', href: '/blog' },
-];
-
-/** Both groups, for the mobile drawer, which lists them in one run. */
-const NAV_LINKS = [...NAV_LINKS_BEFORE, ...NAV_LINKS_AFTER];
+/** Rows as the nav-menus endpoint returns them. */
+interface NavLinkRow {
+  id?: string;
+  label?: string;
+  url?: string | null;
+  gender?: string | null;
+}
 
 interface NavbarProps {
   settings?: Record<string, string>;
   navCategories?: NavCategory[];
   /** Admin-managed quick links for the Shop menu; empty falls back to defaults. */
   quickLinks?: QuickLink[];
+  /** Admin-managed header links left and right of the Shop trigger. */
+  headerBefore?: NavLinkRow[];
+  headerAfter?: NavLinkRow[];
 }
 
-export default function Navbar({ settings = {}, navCategories = [], quickLinks = [] }: NavbarProps) {
+export default function Navbar({
+  settings = {}, navCategories = [], quickLinks = [],
+  headerBefore = [], headerAfter = [],
+}: NavbarProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const router = useRouter();
@@ -96,6 +93,20 @@ export default function Navbar({ settings = {}, navCategories = [], quickLinks =
     }),
     [quickLinks, gender]
   );
+  // Same contract as the quick links: fall back to the built-in set BEFORE
+  // filtering by gender, so targeting every link at one storefront empties the
+  // other run rather than quietly reinstating the defaults there.
+  const linksBefore = useMemo(
+    () => visibleHeaderLinks(resolveHeaderLinks(fromApi(headerBefore), HEADER_BEFORE), gender),
+    [headerBefore, gender]
+  );
+  const linksAfter = useMemo(
+    () => visibleHeaderLinks(resolveHeaderLinks(fromApi(headerAfter), HEADER_AFTER), gender),
+    [headerAfter, gender]
+  );
+  /** The drawer lists both runs together, left-of-Shop first. */
+  const drawerLinks = useMemo(() => [...linksBefore, ...linksAfter], [linksBefore, linksAfter]);
+
   const { user, isAuthenticated, logout, isAdmin } = useAuth();
 
   const handleGenderChange = (g: GenderType) => {
@@ -313,9 +324,9 @@ export default function Navbar({ settings = {}, navCategories = [], quickLinks =
             {/* Desktop nav links */}
             {!isMobile && (
               <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 0, flexGrow: 1, height: '100%' }}>
-                {NAV_LINKS_BEFORE.map((link) => (
+                {linksBefore.map((link) => (
                   <Button
-                    key={link.href}
+                    key={link.id || link.href}
                     component={Link}
                     href={link.href}
                     sx={{
@@ -340,9 +351,9 @@ export default function Navbar({ settings = {}, navCategories = [], quickLinks =
                   <MegaMenuDesktop categories={filteredNavCategories} quickLinks={filteredQuickLinks} layout={navLayout} />
                 )}
 
-                {NAV_LINKS_AFTER.map((link) => (
+                {linksAfter.map((link) => (
                   <Button
-                    key={link.href}
+                    key={link.id || link.href}
                     component={Link}
                     href={link.href}
                     sx={{
@@ -612,8 +623,8 @@ export default function Navbar({ settings = {}, navCategories = [], quickLinks =
             </Box>
           )}
           <List>
-            {NAV_LINKS.map((link) => (
-              <ListItem key={link.href} component={Link} href={link.href} onClick={() => setMobileOpen(false)}
+            {drawerLinks.map((link) => (
+              <ListItem key={link.id || link.href} component={Link} href={link.href} onClick={() => setMobileOpen(false)}
                 sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { bgcolor: '#f5f5f5' } }}>
                 <ListItemText
                   primary={link.label}
