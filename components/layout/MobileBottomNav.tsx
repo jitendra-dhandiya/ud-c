@@ -36,7 +36,14 @@ export default function MobileBottomNav() {
         WebkitTapHighlightColor: 'transparent',
       }}
     >
-      <BottomNavigation value={getActive()} showLabels={false} sx={{ height: 58, touchAction: 'manipulation' }}>
+      {/* MUI gives each action an 80px minimum; five of them need 400px, which is
+          wider than most phones (360-393). The overflow pushed the outer icons
+          off both edges. flex:1 already shares the bar out evenly. */}
+      <BottomNavigation
+        value={getActive()}
+        showLabels={false}
+        sx={{ height: 58, touchAction: 'manipulation', '& .MuiBottomNavigationAction-root': { minWidth: 0 } }}
+      >
         <BottomNavigationAction icon={<Home />} component={Link} href="/" />
         <BottomNavigationAction icon={<Search />} component={Link} href="/search" />
         <BottomNavigationAction

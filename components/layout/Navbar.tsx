@@ -571,7 +571,9 @@ export default function Navbar({
 
       {/* Mobile Drawer */}
       <Drawer anchor="left" open={mobileOpen} onClose={() => setMobileOpen(false)}>
-        <Box sx={{ width: navLayout.mobile.drawerWidth }}>
+        {/* The admin range tops out at 420px, which is wider than a 360-390px
+            phone. The vw ceiling keeps the close button on screen whatever is set. */}
+        <Box sx={{ width: navLayout.mobile.drawerWidth, maxWidth: '85vw' }}>
           <Box sx={{ px: 2.5, py: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
             {settings.logo_url ? (
               <Box sx={{ position: 'relative', height: 34, aspectRatio: LOGO_ASPECT, flexShrink: 1, minWidth: 0, maxWidth: '70%' }}>

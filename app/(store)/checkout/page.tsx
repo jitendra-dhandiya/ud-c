@@ -329,15 +329,17 @@ export default function CheckoutPage() {
                           <Grid item xs={12}>
                             <Field as={TextField} name="addressLine2" label="Address Line 2 (Optional)" fullWidth size="small" />
                           </Grid>
-                          <Grid item xs={5}>
+                          {/* One line of three only from sm up. At xs the Pincode field
+                              came out around 53px wide — too narrow to read what you typed. */}
+                          <Grid item xs={12} sm={5}>
                             <Field as={TextField} name="city" label="City" fullWidth size="small"
                               error={touched.city && !!errors.city} helperText={touched.city && errors.city} />
                           </Grid>
-                          <Grid item xs={4}>
+                          <Grid item xs={6} sm={4}>
                             <Field as={TextField} name="state" label="State" fullWidth size="small"
                               error={touched.state && !!errors.state} helperText={touched.state && errors.state} />
                           </Grid>
-                          <Grid item xs={3}>
+                          <Grid item xs={6} sm={3}>
                             <Field as={TextField} name="pincode" label="Pincode" fullWidth size="small"
                               error={touched.pincode && !!errors.pincode} helperText={touched.pincode && errors.pincode} />
                           </Grid>
@@ -419,6 +421,10 @@ export default function CheckoutPage() {
                             onClick={() => setPaymentMethod('RAZORPAY')}
                             sx={{
                               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              // Measured at 424px inside a 311px card on a 393px phone: the
+                              // provider name and the card badges could neither wrap nor
+                              // shrink, so the right of the row was simply cut off.
+                              flexWrap: 'wrap', gap: 1,
                               p: 2, mb: 1.5, borderRadius: 1.5, cursor: 'pointer',
                               border: '1.5px solid',
                               borderColor: paymentMethod === 'RAZORPAY' ? '#1a1a1a' : '#e0e0e0',
@@ -426,11 +432,11 @@ export default function CheckoutPage() {
                               transition: 'all 0.15s',
                             }}
                           >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0, flex: '1 1 200px' }}>
                               <Radio checked={paymentMethod === 'RAZORPAY'} onChange={() => setPaymentMethod('RAZORPAY')}
                                 sx={{ p: 0, '&.Mui-checked': { color: '#1a1a1a' } }} />
-                              <CreditCard sx={{ color: '#1a1a1a', fontSize: 20 }} />
-                              <Box>
+                              <CreditCard sx={{ color: '#1a1a1a', fontSize: 20, flexShrink: 0 }} />
+                              <Box sx={{ minWidth: 0 }}>
                                 <Typography variant="body2" fontWeight={600}>
                                   Razorpay Secure (UPI, Cards, Int'l Cards, Wallets)
                                 </Typography>
@@ -462,13 +468,13 @@ export default function CheckoutPage() {
                               transition: 'all 0.15s',
                             }}
                           >
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0, flex: '1 1 200px' }}>
                                 <Radio checked={paymentMethod === 'CASHFREE'} onChange={() => setPaymentMethod('CASHFREE')}
                                   sx={{ p: 0, '&.Mui-checked': { color: '#1a1a1a' } }} />
                                 <CreditCard sx={{ color: '#1a1a1a', fontSize: 20 }} />
-                                <Box>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ minWidth: 0 }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                                     <Typography variant="body2" fontWeight={700}>
                                       PhonePe Payment Gateway (UPI, Cards & NetBanking)
                                     </Typography>

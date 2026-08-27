@@ -95,7 +95,9 @@ export default function CollectionPageClient({ collection }: { collection: any }
         </FormControl>
       </Box>
 
-      <Grid container spacing={2.5}>
+      {/* Gutters are narrower on phones so the two columns keep their width —
+          the same scale /shop already uses for its product grid. */}
+      <Grid container spacing={{ xs: 1.5, md: 2.5 }}>
         {loading ? (
           [...Array(12)].map((_, i) => (
             <Grid item xs={6} sm={4} md={3} key={i}>

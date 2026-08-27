@@ -43,7 +43,7 @@ export default function BlogListClient() {
 
       <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
         <TextField
-          size="small" placeholder="Search articles..." sx={{ width: 320 }}
+          size="small" placeholder="Search articles..." sx={{ width: 320, maxWidth: '100%' }}
           value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
           InputProps={{ startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> }}
         />

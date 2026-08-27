@@ -70,7 +70,10 @@ export default function Footer({ settings = {} }: FooterProps) {
             <Typography variant="body2" sx={{ color: '#aaa', mb: 3 }}>
               Subscribe for exclusive offers, new arrivals, and fashion inspiration.
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1, maxWidth: 480, mx: 'auto' }}>
+            {/* The Subscribe button is nowrap with 24px of side padding, so it
+                cannot give ground; on a narrow phone the field would be squeezed
+                to nothing. Wrapping puts the button on its own line instead. */}
+            <Box sx={{ display: 'flex', gap: 1, maxWidth: 480, mx: 'auto', flexWrap: 'wrap' }}>
               <TextField
                 placeholder="Your email address"
                 size="small"

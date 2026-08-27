@@ -24,8 +24,15 @@ html {
    * CRITICAL: Tells the compositor this page scrolls ONLY vertically.
    * Without this the browser consults JS on every touch before committing
    * to a scroll direction → 100-300 ms freeze before scroll starts.
+   *
+   * `pinch-zoom` is listed explicitly. A bare `pan-y` rules out every gesture
+   * it does not name, zoom included — so a page that ended up zoomed (iOS does
+   * this on its own, see the form-control rule below) could not be zoomed back
+   * out, and with horizontal panning also ruled out, everything past the right
+   * edge became unreachable. Naming pinch-zoom keeps the compositor fast path
+   * — horizontal panning is still excluded, so the axis decision needs no JS.
    */
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 
 body {
@@ -33,8 +40,29 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #fafafa;
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
   overscroll-behavior-y: none;
+}
+
+/* ── Form controls: 16px on phones ──────────────────────────────────
+   iOS Safari zooms the whole page in when a form control whose text is under
+   16px takes focus. Tapping the "Sort by" dropdown on a category page was
+   enough: it is 0.9rem = 14.4px. The zoom is not undone when the field blurs,
+   so the page stays ~10% wider than the screen and everything below the sticky
+   header is clipped on the right — which is exactly what a phone screenshot of
+   it looks like, and reads as a broken layout rather than as zoom.
+
+   16px is the threshold, so this removes the trigger instead of papering over
+   it. Desktop is untouched — the size is a deliberate part of the design there,
+   and no desktop browser does this. */
+@media (max-width: 899px) {
+  input,
+  select,
+  textarea,
+  .MuiInputBase-input,
+  .MuiSelect-select {
+    font-size: 16px;
+  }
 }
 
 /* Remove tap highlight on interactive elements */

@@ -197,9 +197,19 @@ export default function ShopPage() {
     <Box sx={{ pb: { xs: 8, md: 6 } }}>
       <Container maxWidth="xl" sx={{ pt: 3 }}>
         {/* Page header */}
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box>
-            <Typography variant="h4" sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 700 }}>
+        {/* Wraps on phones. Without it the title and the Filter+Sort pair sit on one
+            unbreakable line whose minimum is ~430px, so Chrome widens the layout
+            viewport past the screen and clips the right of every row below. */}
+        <Box sx={{
+          mb: 3, display: 'flex', justifyContent: 'space-between',
+          alignItems: 'center', flexWrap: 'wrap', gap: 1.5,
+        }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h4" sx={{
+              fontFamily: 'var(--font-playfair)', fontWeight: 700,
+              fontSize: { xs: '1.6rem', sm: '2.125rem' },
+              overflowWrap: 'anywhere',
+            }}>
               {searchParams.get('search') ? `Search: "${searchParams.get('search')}"` : 'All Products'}
             </Typography>
             {!initialLoading && (
@@ -221,7 +231,7 @@ export default function ShopPage() {
                 Filter {activeFilterCount > 0 && `(${activeFilterCount})`}
               </Button>
             )}
-            <FormControl size="small" sx={{ minWidth: 160 }}>
+            <FormControl size="small" sx={{ minWidth: { xs: 140, sm: 160 } }}>
               <Select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPage(1); }}>
                 {SORT_OPTIONS.map(opt => (
                   <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>

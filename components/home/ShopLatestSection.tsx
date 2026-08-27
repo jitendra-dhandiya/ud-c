@@ -167,7 +167,10 @@ export default function ShopLatestSection({
         </Box>
 
         {/* ── Filter chips ───────────────────────────────────────── */}
-        <Box sx={{
+        {/* h-scroll re-allows horizontal panning inside this strip; body-level
+            touch-action rules it out, which left the chips past the right edge
+            reachable by mouse but not by finger. */}
+        <Box className="h-scroll" sx={{
           display: 'flex',
           gap: { xs: 0.75, md: 1 },
           mb: { xs: 4, md: 5 },

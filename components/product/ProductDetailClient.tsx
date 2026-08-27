@@ -354,7 +354,11 @@ export default function ProductDetailClient({ product }: Props) {
                     // the "other" colour and never dimmed.
                     const muted = labelled && !!selectedColor && !!group.color && !isChosen;
                     return (
-                      <Box key={group.color ?? '__default'}>
+                      // maxWidth caps the run at the column it sits in. Without it a
+                      // colour with ten shots is an unbreakable 712px row, which on a
+                      // phone widens the layout viewport to nearly twice the screen
+                      // and clips the whole page — not just the gallery.
+                      <Box key={group.color ?? '__default'} sx={{ maxWidth: '100%' }}>
                         {labelled && (
                           <Typography
                             sx={{
@@ -371,7 +375,7 @@ export default function ProductDetailClient({ product }: Props) {
                             {group.color ?? 'All colours'}
                           </Typography>
                         )}
-                        <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                           {group.images.map((img: any, i: number) => {
                             const index = group.indices[i];
                             return (

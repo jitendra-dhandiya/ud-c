@@ -43,6 +43,11 @@ export default function OptionBox({ label, selected = false, disabled = false, o
       }}
       sx={{
         minWidth: wide ? 72 : 44,
+        // Colour names come from the database. Without a ceiling and an ellipsis
+        // a "Midnight Navy Blue" paints straight past the right page edge, since
+        // the label is nowrap. 100% keeps it inside whatever row it lands in.
+        maxWidth: '100%',
+        overflow: 'hidden',
         height: 44,
         px: wide ? 2 : 1.5,
         display: 'inline-flex',
@@ -67,7 +72,9 @@ export default function OptionBox({ label, selected = false, disabled = false, o
         '&:focus-visible': { outline: '2px solid #c9a84c', outlineOffset: 2 },
       }}
     >
-      {label}
+      <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
+        {label}
+      </Box>
     </Box>
   );
 }
