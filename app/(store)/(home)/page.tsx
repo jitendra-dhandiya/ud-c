@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { Box } from '@mui/material';
-import GenderHomePage from '../../components/home/GenderHomePage';
-import { API_URL, SITE_NAME } from '../../constants';
-import { GENDER_COOKIE, normalizeGender, type GenderType } from '../../lib/genderPreference';
+import GenderHomePage from '../../../components/home/GenderHomePage';
+import { API_URL, SITE_NAME } from '../../../constants';
+import { GENDER_COOKIE, normalizeGender, type GenderType } from '../../../lib/genderPreference';
 
 export const metadata: Metadata = {
   title: `${SITE_NAME} — Premium Fashion & Lifestyle`,

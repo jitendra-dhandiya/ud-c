@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import { ArrowForward } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { collectionApi, bannerApi } from '../../../services/api.service';
+import { collectionApi, bannerApi } from '../../../../services/api.service';
 
 interface Collection {
   id: string;
