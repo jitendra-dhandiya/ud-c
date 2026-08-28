@@ -227,6 +227,47 @@ export default function ProductDetailClient({ product }: Props) {
     } catch {}
   };
 
+  /**
+   * The phone's own share sheet where there is one, the clipboard everywhere
+   * else.
+   *
+   * `navigator.share` exists only on mobile browsers and only in a secure
+   * context, so a desktop shopper would be left with a button that does
+   * nothing; copying the link is the closest thing that browser can offer.
+   *
+   * Dismissing the sheet rejects with AbortError. That is the shopper changing
+   * their mind, not a failure, and must not raise a toast — every other
+   * rejection falls through to the clipboard so the tap still does something.
+   *
+   * Nothing is awaited before `navigator.share`, deliberately: iOS Safari
+   * requires the call to happen inside the tap's user activation, and an await
+   * placed above this line would silently spend it.
+   */
+  const handleShare = async () => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    if (!url) return;
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: product.name,
+          text: `${product.name} - ${formatPrice(displayPrice)}`,
+          url,
+        });
+        return;
+      } catch (err) {
+        if ((err as Error)?.name === 'AbortError') return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copied');
+    } catch {
+      toast.error('Could not copy the link');
+    }
+  };
+
   return (
     <Box sx={{ pb: { xs: 10, md: 6 } }}>
       <Container maxWidth="xl" sx={{ pt: 3 }}>
@@ -558,7 +599,11 @@ export default function ProductDetailClient({ product }: Props) {
                 >
                   {inWishlist ? <Favorite sx={{ color: '#d32f2f' }} /> : <FavoriteBorder />}
                 </IconButton>
-                <IconButton sx={{ border: '1.5px solid', borderColor: '#e0e0e0', borderRadius: 1, px: 1.5 }}>
+                <IconButton
+                  onClick={handleShare}
+                  aria-label="Share this product"
+                  sx={{ border: '1.5px solid', borderColor: '#e0e0e0', borderRadius: 1, px: 1.5 }}
+                >
                   <Share fontSize="small" />
                 </IconButton>
               </Stack>
