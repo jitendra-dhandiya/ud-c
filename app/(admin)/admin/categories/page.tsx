@@ -26,6 +26,10 @@ const GENDER_META: Record<string, { label: string; color: string; bg: string; ic
 
 const schema = Yup.object({
   name:            Yup.string().required('Name required'),
+  slug:            Yup.string().matches(
+                     /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+                     { excludeEmptyString: true, message: 'Lowercase letters, numbers and single hyphens only' },
+                   ),
   description:     Yup.string(),
   parentId:        Yup.string(),
   sortOrder:       Yup.number(),
@@ -101,7 +105,7 @@ export default function CategoriesPage() {
 
   const formik = useFormik({
     initialValues: {
-      name: '', description: '', parentId: '', sortOrder: 0,
+      name: '', slug: '', description: '', parentId: '', sortOrder: 0,
       isActive: true, showInNav: true, showOnHome: false, isFeatured: false,
       gender: '',
       metaTitle: '', metaDescription: '',
@@ -110,7 +114,15 @@ export default function CategoriesPage() {
     onSubmit: async (values, { setSubmitting }) => {
       try {
         const fd = new FormData();
-        Object.entries(values).forEach(([k, v]) => fd.append(k, String(v)));
+        Object.entries(values).forEach(([k, v]) => {
+          // A blank slug means "leave it as it is". The field has to be skipped
+          // rather than sent empty: on create the backend builds one from the
+          // name only when the value is absent or falsy, and on update it writes
+          // whatever it is given straight through — an empty string there would
+          // blank the live URL of the category.
+          if (k === 'slug' && !String(v).trim()) return;
+          fd.append(k, String(v));
+        });
         if (imageFile) fd.append('image', imageFile);
         if (editCat) {
           await categoryApi.update(editCat.id, fd);
@@ -134,7 +146,7 @@ export default function CategoriesPage() {
     setEditCat(null); setImageFile(null); setImagePreview('');
     formik.resetForm({
       values: {
-        name: '', description: '', parentId: '', sortOrder: 0,
+        name: '', slug: '', description: '', parentId: '', sortOrder: 0,
         isActive: true, showInNav: true, showOnHome: false, isFeatured: false,
         gender: '',
         metaTitle: '', metaDescription: '',
@@ -150,6 +162,7 @@ export default function CategoriesPage() {
     formik.resetForm({
       values: {
         name:            cat.name || '',
+        slug:            cat.slug || '',
         description:     cat.description || '',
         parentId:        cat.parentId || '',
         sortOrder:       cat.sortOrder ?? 0,
@@ -540,6 +553,29 @@ export default function CategoriesPage() {
               {...formik.getFieldProps('name')}
               error={formik.touched.name && !!formik.errors.name}
               helperText={formik.touched.name && formik.errors.name}
+            />
+
+            {/* Renaming a category never used to touch its slug, so four of them
+                ended up advertising a department they no longer sell — Shirts
+                living at /category/streetwear. There was no way to correct that
+                from here at all. Retiring a slug is safe: the old address keeps
+                working and forwards permanently. */}
+            <TextField
+              label="URL slug" size="small" fullWidth name="slug"
+              value={formik.values.slug}
+              onBlur={formik.handleBlur}
+              onChange={(e) => formik.setFieldValue(
+                'slug',
+                e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+/, ''),
+              )}
+              error={formik.touched.slug && !!formik.errors.slug}
+              helperText={
+                formik.touched.slug && formik.errors.slug
+                  ? formik.errors.slug
+                  : editCat
+                    ? `Lives at /category/${formik.values.slug || '…'} — changing it changes the public address. The old one forwards here.`
+                    : 'Leave blank to build one from the name.'
+              }
             />
 
             <FormControl size="small" fullWidth>

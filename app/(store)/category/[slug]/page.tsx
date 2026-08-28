@@ -1,7 +1,8 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import CategoryPageClient from '../../../../components/category/CategoryPageClient';
 import { API_URL, SITE_URL } from '../../../../constants';
+import { legacyCategoryTarget } from '../../../../lib/legacyCategorySlugs';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -39,6 +40,16 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const { slug } = await params;
   const sp = await searchParams;
   const cat = await fetchCategory(slug);
-  if (!cat) notFound();
+
+  if (!cat) {
+    // Only once the slug has resolved to nothing, so this stays inert until the
+    // rename actually happens and cannot strand a URL that still works. Next
+    // answers with a 308, which Google treats as a 301 for ranking — the
+    // difference between them is only whether the HTTP method is preserved.
+    const moved = legacyCategoryTarget(slug);
+    if (moved) permanentRedirect(`/category/${moved}`);
+    notFound();
+  }
+
   return <CategoryPageClient category={cat} searchParams={sp} />;
 }
