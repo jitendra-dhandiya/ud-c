@@ -36,10 +36,13 @@ function PromoStrip() {
     }}>
       {ITEMS.map((item) => (
         <Box key={item.label} sx={{ py: 0.5 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', mb: 0.25, color: '#111' }}>
+          {/* The pair used to be 12px over 11.5px. Uppercase with this much
+              letter-spacing reads smaller than its size, and the grey line
+              under it was the smallest text anywhere on the storefront. */}
+          <Typography sx={{ fontWeight: 800, fontSize: { xs: '0.8125rem', md: '0.9375rem' }, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', mb: 0.5, color: '#111' }}>
             {item.label}
           </Typography>
-          <Typography sx={{ fontSize: '0.72rem', color: '#777' }}>
+          <Typography sx={{ fontSize: { xs: '0.8125rem', md: '0.875rem' }, color: '#666' }}>
             {item.desc}
           </Typography>
         </Box>
