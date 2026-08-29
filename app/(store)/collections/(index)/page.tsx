@@ -41,6 +41,8 @@ export default function CollectionsPage() {
    * as it is, so this can never leave the page looking unfinished.
    */
   const [heroBanner, setHeroBanner] = useState<any | null>(null);
+  /** Whether the banner request has come back yet, either way. */
+  const [bannerChecked, setBannerChecked] = useState(false);
 
   useEffect(() => {
     collectionApi.getAll({ limit: 50, sortBy: 'sortOrder' })
@@ -50,11 +52,40 @@ export default function CollectionsPage() {
 
     bannerApi.getByType('collection')
       .then(({ data }) => setHeroBanner((data as any)?.data?.[0] || null))
-      .catch(() => setHeroBanner(null));
+      .catch(() => setHeroBanner(null))
+      .finally(() => setBannerChecked(true));
   }, []);
 
   const featured = collections.filter(c => c.isFeatured);
   const rest = collections.filter(c => !c.isFeatured);
+
+  /**
+   * An uploaded banner is finished artwork: it arrives with its own wording
+   * already set in it. Painting the page's headings over the top of that put
+   * two unrelated pieces of type in the same space, each making the other hard
+   * to read — the shot that prompted this had "Elevate Your Style" printed in
+   * the image with "Curated For You / Explore our carefully curated
+   * collections" laid across it.
+   *
+   * So when a banner image is present the page contributes no wording of its
+   * own. Anything the admin typed into that banner's own title and subtitle
+   * still shows, because that was written for this artwork and can be removed
+   * from the same screen it was entered on.
+   *
+   * The fallback wording is kept for the case where no banner was ever
+   * uploaded, since the alternative there is an empty black band.
+   */
+  const bannerImage    = heroBanner?.image || '';
+  const bannerTitle    = (heroBanner?.title || '').trim();
+  const bannerSubtitle = (heroBanner?.subtitle || '').trim();
+
+  const heroTitle    = bannerImage ? bannerTitle
+    : bannerChecked ? (bannerTitle || 'Our Collections') : '';
+  const heroSubtitle = bannerImage ? bannerSubtitle
+    : bannerChecked ? (bannerSubtitle
+        || 'Explore our carefully curated collections — each one a story told through fabric, colour, and style.')
+    : '';
+  const hasHeroText  = !!(heroTitle || heroSubtitle);
 
   return (
     <Box sx={{ pb: { xs: 8, md: 6 } }}>
@@ -63,31 +94,46 @@ export default function CollectionsPage() {
         sx={{
           bgcolor: '#1a1a1a',
           color: 'white',
-          py: { xs: 6, md: 9 },
+          // With no wording to make room for, the padding has nothing to space
+          // and the height has to come from somewhere, or the absolutely
+          // positioned artwork collapses to nothing.
+          py: hasHeroText ? { xs: 6, md: 9 } : 0,
+          // Holds the band open both while the banner is still being fetched
+          // and when the artwork carries all the wording itself, so the page
+          // does not jump as the request lands.
+          ...(hasHeroText ? {} : { height: { xs: 200, sm: 300, md: 380 } }),
           textAlign: 'center',
           position: 'relative',
           overflow: 'hidden',
         }}
       >
-        {heroBanner?.image ? (
+        {bannerImage ? (
           <>
             <Box
               component="img"
-              src={heroBanner.image}
-              alt=""
-              aria-hidden
+              src={bannerImage}
+              // Decorative only while type sits over it. On its own the artwork
+              // is the banner, though its wording lives in the pixels and
+              // cannot be read back out here — so the honest alt is still
+              // whatever the admin titled it, and nothing when they titled
+              // it nothing.
+              alt={hasHeroText ? '' : bannerTitle}
+              aria-hidden={hasHeroText ? true : undefined}
               sx={{
                 position: 'absolute', inset: 0,
                 width: '100%', height: '100%',
                 objectFit: 'cover', objectPosition: 'center 40%',
               }}
             />
-            {/* The type sits on top of an unknown photograph, so the scrim is
-                what keeps it readable rather than a matter of taste. */}
-            <Box sx={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(180deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.68) 100%)',
-            }} />
+            {/* The scrim exists to keep type readable over an unknown
+                photograph. With no type over it, it was only darkening the
+                artwork the shop chose to show. */}
+            {hasHeroText && (
+              <Box sx={{
+                position: 'absolute', inset: 0,
+                background: 'linear-gradient(180deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.68) 100%)',
+              }} />
+            )}
           </>
         ) : (
           <Box
@@ -98,26 +144,23 @@ export default function CollectionsPage() {
             }}
           />
         )}
-        <Container maxWidth="md" sx={{ position: 'relative' }}>
-          <Typography
-            variant="overline"
-            sx={{ letterSpacing: '0.25em', color: '#c9a84c', fontWeight: 600, display: 'block', mb: 1 }}
-          >
-            Curated For You
-          </Typography>
-          {/* The banner's own title and subtitle win when it carries them, so
-              the page can be re-themed for a season without a deploy. */}
-          <Typography
-            variant="h3"
-            sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 700, mb: 2 }}
-          >
-            {heroBanner?.title || 'Our Collections'}
-          </Typography>
-          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.8)', maxWidth: 480, mx: 'auto' }}>
-            {heroBanner?.subtitle
-              || 'Explore our carefully curated collections — each one a story told through fabric, colour, and style.'}
-          </Typography>
-        </Container>
+        {hasHeroText && (
+          <Container maxWidth="md" sx={{ position: 'relative' }}>
+            {heroTitle && (
+              <Typography
+                variant="h3"
+                sx={{ fontFamily: 'var(--font-playfair)', fontWeight: 700, mb: heroSubtitle ? 2 : 0 }}
+              >
+                {heroTitle}
+              </Typography>
+            )}
+            {heroSubtitle && (
+              <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.8)', maxWidth: 480, mx: 'auto' }}>
+                {heroSubtitle}
+              </Typography>
+            )}
+          </Container>
+        )}
       </Box>
 
       <Container maxWidth="xl" sx={{ pt: { xs: 5, md: 7 } }}>
