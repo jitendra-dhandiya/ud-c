@@ -60,30 +60,35 @@ export default function CollectionsPage() {
   const rest = collections.filter(c => !c.isFeatured);
 
   /**
-   * An uploaded banner is finished artwork: it arrives with its own wording
-   * already set in it. Painting the page's headings over the top of that put
-   * two unrelated pieces of type in the same space, each making the other hard
-   * to read — the shot that prompted this had "Elevate Your Style" printed in
-   * the image with "Curated For You / Explore our carefully curated
-   * collections" laid across it.
+   * An uploaded banner is finished artwork. It arrives with its wording already
+   * set into it — this one reads "Elevate Your Style" — so the page adds none
+   * of its own on top. Two unrelated pieces of type in one space made both hard
+   * to read, whichever of them was winning.
    *
-   * So when a banner image is present the page contributes no wording of its
-   * own. Anything the admin typed into that banner's own title and subtitle
-   * still shows, because that was written for this artwork and can be removed
-   * from the same screen it was entered on.
+   * That includes the banner's own title and subtitle. They are still worth
+   * having: the title names the banner in the admin list and becomes the
+   * image's alt text, which is the only description of the artwork a screen
+   * reader can be given, since its wording lives in the pixels. But nothing is
+   * drawn over the picture.
    *
-   * The fallback wording is kept for the case where no banner was ever
-   * uploaded, since the alternative there is an empty black band.
+   * Wording for a banner therefore belongs in the banner, set by whoever made
+   * it, next to the type it has to sit alongside.
+   *
+   * The page keeps its own headings for one case only: no banner has ever been
+   * uploaded, where the alternative is a bare black band.
    */
   const bannerImage    = heroBanner?.image || '';
   const bannerTitle    = (heroBanner?.title || '').trim();
   const bannerSubtitle = (heroBanner?.subtitle || '').trim();
 
-  const heroTitle    = bannerImage ? bannerTitle
-    : bannerChecked ? (bannerTitle || 'Our Collections') : '';
-  const heroSubtitle = bannerImage ? bannerSubtitle
-    : bannerChecked ? (bannerSubtitle
-        || 'Explore our carefully curated collections — each one a story told through fabric, colour, and style.')
+  // Nothing is written until the request has come back either way, or the
+  // fallback wording would paint on every first render and be replaced a
+  // moment later.
+  const showFallbackText = bannerChecked && !bannerImage;
+  const heroTitle    = showFallbackText ? (bannerTitle || 'Our Collections') : '';
+  const heroSubtitle = showFallbackText
+    ? (bannerSubtitle
+       || 'Explore our carefully curated collections — each one a story told through fabric, colour, and style.')
     : '';
   const hasHeroText  = !!(heroTitle || heroSubtitle);
 
@@ -94,47 +99,42 @@ export default function CollectionsPage() {
         sx={{
           bgcolor: '#1a1a1a',
           color: 'white',
-          // With no wording to make room for, the padding has nothing to space
-          // and the height has to come from somewhere, or the absolutely
-          // positioned artwork collapses to nothing.
-          py: hasHeroText ? { xs: 6, md: 9 } : 0,
-          // Holds the band open both while the banner is still being fetched
-          // and when the artwork carries all the wording itself, so the page
-          // does not jump as the request lands.
-          ...(hasHeroText ? {} : { height: { xs: 200, sm: 300, md: 380 } }),
+          // Only the wordless block needs padding. With artwork the band is
+          // exactly as tall as the artwork, so padding would add a black
+          // margin above and below it.
+          py: bannerImage ? 0 : { xs: 6, md: 9 },
+          // Holds the band open while the banner request is still out, so the
+          // page does not jump when it lands.
+          ...(bannerImage || hasHeroText ? {} : { height: { xs: 200, sm: 300, md: 380 } }),
           textAlign: 'center',
           position: 'relative',
           overflow: 'hidden',
         }}
       >
         {bannerImage ? (
-          <>
-            <Box
-              component="img"
-              src={bannerImage}
-              // Decorative only while type sits over it. On its own the artwork
-              // is the banner, though its wording lives in the pixels and
-              // cannot be read back out here — so the honest alt is still
-              // whatever the admin titled it, and nothing when they titled
-              // it nothing.
-              alt={hasHeroText ? '' : bannerTitle}
-              aria-hidden={hasHeroText ? true : undefined}
-              sx={{
-                position: 'absolute', inset: 0,
-                width: '100%', height: '100%',
-                objectFit: 'cover', objectPosition: 'center 40%',
-              }}
-            />
-            {/* The scrim exists to keep type readable over an unknown
-                photograph. With no type over it, it was only darkening the
-                artwork the shop chose to show. */}
-            {hasHeroText && (
-              <Box sx={{
-                position: 'absolute', inset: 0,
-                background: 'linear-gradient(180deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.68) 100%)',
-              }} />
-            )}
-          </>
+          <Box
+            component="img"
+            src={bannerImage}
+            // The artwork IS the banner now, so this is content rather than
+            // decoration. Its wording is in the pixels and cannot be read back
+            // out here, which leaves the title the admin gave it as the only
+            // description available — and an empty alt, correctly, when they
+            // gave it none.
+            alt={bannerTitle}
+            sx={{
+              // In normal flow, not absolute: the band then takes the artwork's
+              // own height and nothing is cropped. This one is 3840x1493 — a
+              // 2.57:1 design — and a fixed-height band was slicing a strip out
+              // of the middle of it, cutting the heads off the models.
+              display: 'block',
+              width: '100%',
+              height: 'auto',
+              // A portrait upload would otherwise fill the screen; past this it
+              // crops rather than distorts.
+              maxHeight: { xs: 420, md: 560 },
+              objectFit: 'cover',
+            }}
+          />
         ) : (
           <Box
             sx={{
