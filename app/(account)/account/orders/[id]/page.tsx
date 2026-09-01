@@ -11,6 +11,7 @@ import { orderApi } from '../../../../../services/api.service';
 import { formatDate, formatPrice } from '../../../../../utils/format';
 import { ORDER_STATUSES } from '../../../../../constants';
 import { toast } from 'react-hot-toast';
+import { orderAddress } from '@/lib/orderAddress';
 
 const STATUS_COLORS: Record<string, any> = {
   PENDING: 'warning', CONFIRMED: 'info', PROCESSING: 'info',
@@ -64,6 +65,7 @@ export default function OrderDetailPage() {
 
   const currentStep = STATUS_STEPS.indexOf(order.status);
   const isCancellable = ['PENDING', 'CONFIRMED'].includes(order.status);
+  const addr = orderAddress(order);
 
   return (
     <Box>
@@ -123,10 +125,16 @@ export default function OrderDetailPage() {
                     <Avatar src={item.product?.images?.[0]?.url || item.image} variant="rounded"
                       sx={{ width: 60, height: 75, bgcolor: '#f5f5f5' }} />
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="body2" fontWeight={600}>{item.product?.name || item.name}</Typography>
-                      {item.variant && (
-                        <Typography variant="caption" color="text.secondary">{item.variant.color} · {item.size}</Typography>
-                      )}
+                      <Typography variant="body2" fontWeight={600}>{item.name || item.product?.name}</Typography>
+                      {(() => {
+                        // Snapshotted on the line at checkout; the variant is a
+                        // fallback for orders placed before that was recorded.
+                        const parts = [item.size || item.variant?.size, item.color || item.variant?.color]
+                          .filter(Boolean);
+                        return parts.length ? (
+                          <Typography variant="caption" color="text.secondary">{parts.join(' · ')}</Typography>
+                        ) : null;
+                      })()}
                       <Typography variant="caption" color="text.secondary" display="block">
                         Qty: {item.quantity} × {formatPrice(item.price)}
                       </Typography>
@@ -173,17 +181,17 @@ export default function OrderDetailPage() {
           <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, mb: 2 }}>
             <CardContent sx={{ p: 2.5 }}>
               <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>Delivery Address</Typography>
-              {order.shippingAddress && (
+              {addr && (
                 <Box>
-                  <Typography variant="body2" fontWeight={600}>{order.shippingAddress.fullName}</Typography>
-                  <Typography variant="body2" color="text.secondary">{order.shippingAddress.addressLine1}</Typography>
-                  {order.shippingAddress.addressLine2 && (
-                    <Typography variant="body2" color="text.secondary">{order.shippingAddress.addressLine2}</Typography>
+                  <Typography variant="body2" fontWeight={600}>{addr.name}</Typography>
+                  <Typography variant="body2" color="text.secondary">{addr.line1}</Typography>
+                  {addr.line2 && (
+                    <Typography variant="body2" color="text.secondary">{addr.line2}</Typography>
                   )}
                   <Typography variant="body2" color="text.secondary">
-                    {order.shippingAddress.city}, {order.shippingAddress.state} — {order.shippingAddress.pincode}
+                    {addr.city}, {addr.state} — {addr.pincode}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">{order.shippingAddress.phone}</Typography>
+                  <Typography variant="body2" color="text.secondary">{addr.phone}</Typography>
                 </Box>
               )}
             </CardContent>

@@ -6,19 +6,23 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
   CircularProgress, Stack, TablePagination,
 } from '@mui/material';
-import { Search, Edit } from '@mui/icons-material';
+import { Search, Edit, Visibility } from '@mui/icons-material';
 import {
   useReactTable, getCoreRowModel, flexRender,
   createColumnHelper, ColumnDef,
 } from '@tanstack/react-table';
+import { useRouter } from 'next/navigation';
 import { orderApi } from '../../../../services/api.service';
 import { formatPrice, formatDate } from '../../../../utils/format';
+import { orderAddress } from '../../../../lib/orderAddress';
 import toast from 'react-hot-toast';
 
 interface Order {
   id: string; orderNumber: string; status: string; paymentStatus: string;
-  total: number; createdAt: string;
-  user: { firstName: string; lastName: string; email: string };
+  total: number; createdAt: string; paymentMethod?: string;
+  user: { firstName: string; lastName: string; email: string; phone?: string };
+  shippingAddress?: Record<string, unknown> | null;
+  address?: Record<string, unknown> | null;
   _count: { items: number };
 }
 
@@ -32,6 +36,7 @@ const STATUS_OPTIONS = [
 const PAGE_SIZE = 20;
 
 export default function AdminOrdersPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -92,12 +97,36 @@ export default function AdminOrdersPage() {
     }),
     columnHelper.accessor('user', {
       header: 'Customer',
-      cell: ({ getValue }) => (
-        <Box>
-          <Typography variant="body2" fontWeight={600}>{getValue()?.firstName} {getValue()?.lastName}</Typography>
-          <Typography variant="caption" color="text.secondary">{getValue()?.email}</Typography>
-        </Box>
-      ),
+      cell: ({ row, getValue }) => {
+        const u = getValue();
+        const phone = u?.phone || orderAddress(row.original)?.phone;
+        return (
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="body2" fontWeight={600} noWrap>
+              {[u?.firstName, u?.lastName].filter(Boolean).join(' ') || '—'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap display="block">
+              {phone || u?.email || '—'}
+            </Typography>
+          </Box>
+        );
+      },
+    }),
+    columnHelper.display({
+      id: 'deliverTo',
+      header: 'Deliver to',
+      cell: ({ row }) => {
+        const a = orderAddress(row.original);
+        if (!a) {
+          return <Typography variant="caption" color="error.main">No address</Typography>;
+        }
+        return (
+          <Box sx={{ minWidth: 0, maxWidth: 200 }}>
+            <Typography variant="body2" noWrap>{a.city}, {a.state}</Typography>
+            <Typography variant="caption" color="text.secondary" fontFamily="monospace">{a.pincode}</Typography>
+          </Box>
+        );
+      },
     }),
     columnHelper.accessor('_count', {
       header: 'Items',
@@ -136,18 +165,29 @@ export default function AdminOrdersPage() {
       id: 'actions',
       header: 'Actions',
       cell: ({ row }) => (
-        <Tooltip title="Update Status">
-          <IconButton size="small" onClick={() => {
-            setUpdateOrder(row.original);
-            setNewStatus(row.original.status);
-            setTrackingNumber('');
-          }}>
-            <Edit fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Tooltip title="View order">
+            <IconButton size="small" onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/admin/orders/${row.original.id}`);
+            }}>
+              <Visibility fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Update Status">
+            <IconButton size="small" onClick={(e) => {
+              e.stopPropagation();
+              setUpdateOrder(row.original);
+              setNewStatus(row.original.status);
+              setTrackingNumber('');
+            }}>
+              <Edit fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
       ),
     }),
-  ], []);
+  ], [router]);
 
   const table = useReactTable({
     data: orders,
@@ -169,7 +209,7 @@ export default function AdminOrdersPage() {
         <CardContent sx={{ p: 2 }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2.5 }}>
             <TextField
-              placeholder="Search by order number or customer..." size="small"
+              placeholder="Search order no., name, phone, email or pincode…" size="small"
               value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }}
               InputProps={{ startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> }}
               sx={{ maxWidth: 360, flex: 1 }}
@@ -215,7 +255,8 @@ export default function AdminOrdersPage() {
                     </td>
                   </tr>
                 ) : table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} style={{ borderBottom: '1px solid #f5f5f5' }}
+                  <tr key={row.id} style={{ borderBottom: '1px solid #f5f5f5', cursor: 'pointer' }}
+                    onClick={() => router.push(`/admin/orders/${row.original.id}`)}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafafa')}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >

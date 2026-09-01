@@ -98,6 +98,7 @@ export const orderApi = {
     api.post(`/orders/${id}/cancel`, { reason }),
   cancelOrder: (id: string) => api.post(`/orders/${id}/cancel`),
   // Admin
+  getByIdAdmin: (id: string) => api.get<{ data: Order }>(`/orders/admin/${id}`),
   getAll: (params?: Record<string, unknown>) => api.get('/orders', { params }),
   updateStatus: (id: string, data: object) => api.put(`/orders/${id}/status`, data),
 };
