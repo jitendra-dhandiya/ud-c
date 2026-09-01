@@ -46,7 +46,7 @@ const FONT_SIZES: Record<string, string> = {
 
 const DEFAULT_ITEMS: MarqueeItem[] = [
   { text: 'Free Shipping on Orders Above ₹999', icon: '🚚' },
-  { text: '7-Day Easy Returns', icon: '↩' },
+  { text: 'Easy Size Exchange', icon: '↩' },
   { text: 'New Arrivals Every Week', icon: '✨' },
   { text: 'Exclusive Offers for Members', icon: '🎁' },
   { text: 'Secure Payments — UPI · Cards · COD', icon: '🔒' },

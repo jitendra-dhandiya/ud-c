@@ -130,12 +130,13 @@ export default function TermsPage() {
             </P>
           </Section>
 
-          <Section title="6. Returns and Refunds">
+          <Section title="6. Returns and Exchanges">
             <P>
-              Our return and refund policy allows returns within 7 days of delivery for eligible items. Products
-              must be unused, unwashed, and in their original packaging with tags intact. Certain items (sale
-              products, innerwear, customised orders) are not eligible for return. Please refer to our{' '}
-              <strong>Return &amp; Refund Policy</strong> for full details.
+              Return or complaint requests must be raised within 36 hours of delivery, and are accepted only
+              where a wrong or damaged product has been received. A complete, uninterrupted unboxing video is
+              mandatory for every such claim. Eligible returns are settled in store credit; we do not issue
+              direct bank refunds. Size exchanges are available against a courier handling charge. Please refer
+              to our <strong>Return &amp; Exchange Policy</strong> for full details.
             </P>
           </Section>
 

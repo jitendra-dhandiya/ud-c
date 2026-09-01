@@ -612,7 +612,7 @@ export default function ProductDetailClient({ product }: Props) {
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
                 {[
                   { icon: <LocalShipping fontSize="small" />, text: 'Free shipping above ₹999' },
-                  { icon: <Replay fontSize="small" />, text: '7-day easy returns' },
+                  { icon: <Replay fontSize="small" />, text: 'Easy size exchange' },
                   { icon: <Security fontSize="small" />, text: 'Secure payments' },
                 ].map((item) => (
                   <Box key={item.text} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: '#666' }}>

@@ -54,7 +54,7 @@ const FONT_SIZE_OPTIONS = [
 const DEFAULT_CONFIG: MarqueeConfig = {
   items: [
     { text: 'Free Shipping on Orders Above ₹999', icon: '🚚', link: '' },
-    { text: '7-Day Easy Returns', icon: '↩', link: '' },
+    { text: 'Easy Size Exchange', icon: '↩', link: '' },
     { text: 'New Arrivals Every Week', icon: '✨', link: '' },
     { text: 'Exclusive Offers for Members', icon: '🎁', link: '' },
     { text: 'Secure Payments — UPI · Cards · COD', icon: '🔒', link: '' },

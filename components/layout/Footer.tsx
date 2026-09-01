@@ -18,7 +18,7 @@ const FOOTER_LINKS = {
   'Help': [
     { label: 'FAQs', href: '/faq' },
     { label: 'Order Tracking', href: '/account/orders' },
-    { label: 'Return & Refund Policy', href: '/return-policy' },
+    { label: 'Return & Exchange Policy', href: '/return-policy' },
     { label: 'Shipping Policy', href: '/shipping-policy' },
     { label: 'Contact Us', href: '/contact' },
   ],
@@ -228,7 +228,7 @@ export default function Footer({ settings = {} }: FooterProps) {
             {[
               { label: 'Privacy Policy', href: '/privacy-policy' },
               { label: 'Terms & Conditions', href: '/terms' },
-              { label: 'Return & Refund', href: '/return-policy' },
+              { label: 'Return & Exchange', href: '/return-policy' },
               { label: 'Shipping Policy', href: '/shipping-policy' },
             ].map((l) => (
               <Link key={l.href} href={l.href} style={{ textDecoration: 'none' }}>

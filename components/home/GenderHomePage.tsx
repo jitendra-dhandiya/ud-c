@@ -19,7 +19,7 @@ import type { GenderType } from '../../lib/genderPreference';
 function PromoStrip() {
   const ITEMS = [
     { label: 'Free Shipping', desc: 'On orders above ₹999' },
-    { label: 'Easy Returns', desc: '7-day hassle-free returns' },
+    { label: 'Easy Exchanges', desc: 'Size exchange available' },
     { label: 'Secure Payments', desc: 'Razorpay · UPI · COD' },
   ];
   return (

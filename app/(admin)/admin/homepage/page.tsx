@@ -94,7 +94,7 @@ interface MarqueeEditorProps {
 function MarqueeEditor({ config, onChange }: MarqueeEditorProps) {
   const items: MarqueeItem[] = config.items || [
     { text: 'Free Shipping on Orders Above ₹999', icon: '🚚', link: '' },
-    { text: '7-Day Easy Returns', icon: '↩', link: '' },
+    { text: 'Easy Size Exchange', icon: '↩', link: '' },
     { text: 'New Arrivals Every Week', icon: '✨', link: '' },
   ];
   const speed    = config.speed    ?? 35;
