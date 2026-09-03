@@ -5,8 +5,11 @@ import {
   Box, Typography, Card, CardContent, Grid, Chip, Avatar, Divider,
   IconButton, Button, TextField, MenuItem, Dialog, DialogTitle,
   DialogContent, DialogActions, Skeleton, Stack, Tooltip,
+  ToggleButton, ToggleButtonGroup, InputAdornment, Alert,
 } from '@mui/material';
-import { ArrowBack, ContentCopy, Phone, Email } from '@mui/icons-material';
+import {
+  ArrowBack, ContentCopy, Phone, Email, LocalShipping, DirectionsBike, Save,
+} from '@mui/icons-material';
 import { orderApi } from '../../../../../services/api.service';
 import { formatDate, formatPrice } from '../../../../../utils/format';
 import { orderAddress, formatAddressBlock } from '../../../../../lib/orderAddress';
@@ -29,15 +32,56 @@ export default function OrderDetailAdminPage() {
   const [trackingNumber, setTrackingNumber] = useState('');
   const [updating, setUpdating] = useState(false);
 
+  // Delivery method — edited in place rather than in a dialog, because it is
+  // read on every visit and changed on some of them.
+  const [fulfilment, setFulfilment] = useState<'SELF' | 'DELHIVERY'>('DELHIVERY');
+  const [partnerName, setPartnerName] = useState('');
+  const [partnerPhone, setPartnerPhone] = useState('');
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [codCollected, setCodCollected] = useState('');
+  const [waybill, setWaybill] = useState('');
+  const [savingFulfilment, setSavingFulfilment] = useState(false);
+
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     orderApi.getByIdAdmin(id).then(({ data }) => {
-      setOrder(data.data);
-      setNewStatus(data.data.status);
-      setTrackingNumber(data.data.trackingNumber || '');
+      const o = data.data as any;
+      setOrder(o);
+      setNewStatus(o.status);
+      setTrackingNumber(o.trackingNumber || '');
+      setFulfilment(o.fulfilmentType === 'SELF' ? 'SELF' : 'DELHIVERY');
+      setPartnerName(o.deliveryPartnerName || '');
+      setPartnerPhone(o.deliveryPartnerPhone || '');
+      setDeliveryNotes(o.deliveryNotes || '');
+      setCodCollected(o.codCollected != null ? String(o.codCollected) : '');
+      setWaybill(o.trackingNumber || '');
     }).finally(() => setLoading(false));
   }, [id]);
+
+  const saveFulfilment = async () => {
+    if (fulfilment === 'SELF' && !partnerName.trim()) {
+      toast.error('Add the name of the person delivering this order');
+      return;
+    }
+    setSavingFulfilment(true);
+    try {
+      const { data } = await orderApi.updateFulfilment(id, {
+        fulfilmentType: fulfilment,
+        deliveryPartnerName:  fulfilment === 'SELF' ? partnerName.trim()  : null,
+        deliveryPartnerPhone: fulfilment === 'SELF' ? partnerPhone.trim() : null,
+        deliveryNotes: deliveryNotes.trim() || null,
+        codCollected: codCollected.trim() === '' ? null : Number(codCollected),
+        trackingNumber: fulfilment === 'DELHIVERY' ? (waybill.trim() || null) : null,
+      });
+      setOrder((o: any) => ({ ...o, ...(data as any).data }));
+      toast.success('Delivery method saved');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Could not save the delivery method');
+    } finally {
+      setSavingFulfilment(false);
+    }
+  };
 
   const updateStatus = async () => {
     setUpdating(true);
@@ -82,6 +126,14 @@ export default function OrderDetailAdminPage() {
           <Typography variant="caption" color="text.secondary">{formatDate(order.createdAt)}</Typography>
         </Box>
         <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+          <Chip
+            size="small"
+            icon={order.fulfilmentType === 'SELF'
+              ? <DirectionsBike sx={{ fontSize: 15 }} />
+              : <LocalShipping sx={{ fontSize: 15 }} />}
+            label={order.fulfilmentType === 'SELF' ? 'Self delivery' : 'Delhivery'}
+            sx={{ fontWeight: 700, bgcolor: order.fulfilmentType === 'SELF' ? '#ede7f6' : '#e3f2fd' }}
+          />
           <Chip label={order.status} color={STATUS_COLORS[order.status] || 'default'} sx={{ fontWeight: 700 }} />
           <Button variant="outlined" size="small" onClick={() => setStatusDialog(true)}
             sx={{ borderColor: '#1a1a1a', color: '#1a1a1a' }}>
@@ -163,6 +215,86 @@ export default function OrderDetailAdminPage() {
                   <Typography variant="body2" fontWeight={800}>{formatPrice(order.total)}</Typography>
                 </Box>
               </Box>
+            </CardContent>
+          </Card>
+
+          {/* Delivery method */}
+          <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, mb: 3 }}>
+            <CardContent sx={{ p: 2.5 }}>
+              <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>Delivery Method</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                Set automatically from the pincode. Change it here when this order is an exception.
+              </Typography>
+
+              <ToggleButtonGroup
+                exclusive
+                fullWidth
+                value={fulfilment}
+                onChange={(_, v) => v && setFulfilment(v)}
+                sx={{ mb: 2.5 }}
+              >
+                <ToggleButton value="DELHIVERY" sx={{ py: 1.25, gap: 1, textTransform: 'none', fontWeight: 700 }}>
+                  <LocalShipping sx={{ fontSize: 18 }} /> Delhivery
+                </ToggleButton>
+                <ToggleButton value="SELF" sx={{ py: 1.25, gap: 1, textTransform: 'none', fontWeight: 700 }}>
+                  <DirectionsBike sx={{ fontSize: 18 }} /> Self delivery
+                </ToggleButton>
+              </ToggleButtonGroup>
+
+              {fulfilment === 'SELF' ? (
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField label="Delivered by" size="small" fullWidth required
+                      value={partnerName} onChange={e => setPartnerName(e.target.value)}
+                      placeholder="Name of the person taking it" />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField label="Their phone" size="small" fullWidth
+                      value={partnerPhone} onChange={e => setPartnerPhone(e.target.value)} />
+                  </Grid>
+                  {order.paymentMethod === 'COD' && (
+                    <Grid item xs={12} sm={6}>
+                      <TextField label="Cash collected" size="small" fullWidth type="number"
+                        value={codCollected} onChange={e => setCodCollected(e.target.value)}
+                        InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
+                        helperText="Fill this in once the money is in hand" />
+                    </Grid>
+                  )}
+                </Grid>
+              ) : (
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <TextField label="Delhivery waybill number" size="small" fullWidth
+                      value={waybill} onChange={e => setWaybill(e.target.value)}
+                      placeholder="Paste it from the Delhivery panel"
+                      helperText="The customer sees this as their tracking number" />
+                  </Grid>
+                </Grid>
+              )}
+
+              <TextField label="Delivery notes" size="small" fullWidth multiline rows={2} sx={{ mt: 2 }}
+                value={deliveryNotes} onChange={e => setDeliveryNotes(e.target.value)}
+                placeholder="Landmark, best time to call, gate code — anything the person delivering needs" />
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
+                <Button variant="contained" size="small" startIcon={<Save sx={{ fontSize: 16 }} />}
+                  onClick={saveFulfilment} disabled={savingFulfilment}
+                  sx={{ bgcolor: '#1a1a1a', '&:hover': { bgcolor: '#333' } }}>
+                  {savingFulfilment ? 'Saving…' : 'Save delivery method'}
+                </Button>
+                {order.dispatchedAt && (
+                  <Typography variant="caption" color="text.secondary">
+                    Dispatched {formatDate(order.dispatchedAt)}
+                  </Typography>
+                )}
+              </Box>
+
+              {fulfilment === 'DELHIVERY' && (
+                <Alert severity="info" sx={{ mt: 2, py: 0.5 }}>
+                  Delhivery is not connected to this panel yet — create the shipment in the Delhivery
+                  dashboard and paste the waybill number here.
+                </Alert>
+              )}
             </CardContent>
           </Card>
 

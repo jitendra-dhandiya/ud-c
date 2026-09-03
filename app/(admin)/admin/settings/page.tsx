@@ -425,7 +425,7 @@ export default function SettingsPage() {
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>;
 
   const storeKeys = ['site_name', 'site_tagline', 'site_description', 'site_email', 'site_phone', 'site_address', 'contact_hours', 'logo_url', 'currency', 'currency_symbol'];
-  const shippingKeys = ['free_shipping_threshold', 'standard_shipping_rate', 'express_shipping_rate'];
+  const shippingKeys = ['free_shipping_threshold', 'standard_shipping_rate', 'express_shipping_rate', 'self_delivery_pincodes'];
   const socialKeys = ['instagram_url', 'facebook_url', 'twitter_url', 'youtube_url', 'pinterest_url'];
   const homepageKeys = ['announcement_text'];
   const analyticsKeys = ['google_analytics_id', 'facebook_pixel_id'];
@@ -529,6 +529,23 @@ export default function SettingsPage() {
                       onChange={e => set(key, e.target.value)} />
                   </Grid>
                 ))}
+                <Grid item xs={12}>
+                  <TextField
+                    label="Self-delivery pincodes"
+                    size="small"
+                    fullWidth
+                    multiline
+                    rows={3}
+                    placeholder="302017, 302018, 3030"
+                    value={settings['self_delivery_pincodes'] ?? ''}
+                    onChange={e => set('self_delivery_pincodes', e.target.value)}
+                    helperText={
+                      'Orders going to these pincodes are marked "Self delivery" automatically; everything else goes to Delhivery. ' +
+                      'Separate with commas or new lines. A short entry covers the whole block — "3020" matches every pincode starting 3020. ' +
+                      'Leave empty to send every order to Delhivery. You can still change the method on any individual order.'
+                    }
+                  />
+                </Grid>
               </Grid>
               <SaveBtn keys={shippingKeys} />
             </TabPanel>

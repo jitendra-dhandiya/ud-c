@@ -6,7 +6,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
   CircularProgress, Stack, TablePagination,
 } from '@mui/material';
-import { Search, Edit, Visibility } from '@mui/icons-material';
+import { Search, Edit, Visibility, LocalShipping, DirectionsBike } from '@mui/icons-material';
 import {
   useReactTable, getCoreRowModel, flexRender,
   createColumnHelper, ColumnDef,
@@ -20,6 +20,8 @@ import toast from 'react-hot-toast';
 interface Order {
   id: string; orderNumber: string; status: string; paymentStatus: string;
   total: number; createdAt: string; paymentMethod?: string;
+  fulfilmentType?: 'SELF' | 'DELHIVERY';
+  deliveryPartnerName?: string | null;
   user: { firstName: string; lastName: string; email: string; phone?: string };
   shippingAddress?: Record<string, unknown> | null;
   address?: Record<string, unknown> | null;
@@ -43,6 +45,7 @@ export default function AdminOrdersPage() {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [methodFilter, setMethodFilter] = useState('');
   const [updateOrder, setUpdateOrder] = useState<Order | null>(null);
   const [newStatus, setNewStatus] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
@@ -50,14 +53,19 @@ export default function AdminOrdersPage() {
 
   const fetchOrders = useCallback(() => {
     setLoading(true);
-    orderApi.getAll({ page: page + 1, limit: PAGE_SIZE, search: search || undefined, status: statusFilter || undefined })
+    orderApi.getAll({
+      page: page + 1, limit: PAGE_SIZE,
+      search: search || undefined,
+      status: statusFilter || undefined,
+      fulfilmentType: methodFilter || undefined,
+    })
       .then(({ data }) => {
         setOrders((data as any).data || []);
         setTotal((data as any).meta?.total || 0);
       })
       .catch(() => setOrders([]))
       .finally(() => setLoading(false));
-  }, [page, search, statusFilter]);
+  }, [page, search, statusFilter, methodFilter]);
 
   useEffect(() => {
     const t = setTimeout(fetchOrders, search ? 400 : 0);
@@ -133,6 +141,29 @@ export default function AdminOrdersPage() {
       cell: ({ getValue }) => (
         <Typography variant="body2" color="text.secondary">{getValue()?.items} items</Typography>
       ),
+    }),
+    columnHelper.display({
+      id: 'method',
+      header: 'Method',
+      cell: ({ row }) => {
+        const self = row.original.fulfilmentType === 'SELF';
+        return (
+          <Box>
+            <Chip
+              size="small"
+              icon={self ? <DirectionsBike sx={{ fontSize: 13 }} /> : <LocalShipping sx={{ fontSize: 13 }} />}
+              label={self ? 'Self' : 'Delhivery'}
+              sx={{ height: 22, fontSize: '0.65rem', fontWeight: 700,
+                    bgcolor: self ? '#ede7f6' : '#e3f2fd' }}
+            />
+            {self && row.original.deliveryPartnerName && (
+              <Typography variant="caption" color="text.secondary" display="block" noWrap sx={{ mt: 0.25 }}>
+                {row.original.deliveryPartnerName}
+              </Typography>
+            )}
+          </Box>
+        );
+      },
     }),
     columnHelper.accessor('total', {
       header: 'Total',
@@ -219,6 +250,15 @@ export default function AdminOrdersPage() {
               <Select value={statusFilter} label="Status" onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}>
                 <MenuItem value="">All Statuses</MenuItem>
                 {STATUS_OPTIONS.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 170 }}>
+              <InputLabel>Delivery</InputLabel>
+              <Select value={methodFilter} label="Delivery"
+                onChange={(e) => { setMethodFilter(e.target.value); setPage(0); }}>
+                <MenuItem value="">All Methods</MenuItem>
+                <MenuItem value="SELF">Self delivery</MenuItem>
+                <MenuItem value="DELHIVERY">Delhivery</MenuItem>
               </Select>
             </FormControl>
           </Stack>
