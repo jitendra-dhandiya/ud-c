@@ -11,6 +11,7 @@ import {
   ArrowBack, ContentCopy, Phone, Email, LocalShipping, DirectionsBike, Save,
 } from '@mui/icons-material';
 import { orderApi } from '../../../../../services/api.service';
+import DeliveryOtpCard from '../../../../../components/admin/DeliveryOtpCard';
 import { formatDate, formatPrice } from '../../../../../utils/format';
 import { orderAddress, formatAddressBlock } from '../../../../../lib/orderAddress';
 import { toast } from 'react-hot-toast';
@@ -41,6 +42,9 @@ export default function OrderDetailAdminPage() {
   const [codCollected, setCodCollected] = useState('');
   const [waybill, setWaybill] = useState('');
   const [savingFulfilment, setSavingFulfilment] = useState(false);
+  // Only ever filled in when closing a self-delivery that has no confirmed
+  // code — a customer with no email, a phone that never answered.
+  const [overrideReason, setOverrideReason] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -86,12 +90,17 @@ export default function OrderDetailAdminPage() {
   const updateStatus = async () => {
     setUpdating(true);
     try {
-      await orderApi.updateStatus(id, { status: newStatus, trackingNumber: trackingNumber || undefined });
+      await orderApi.updateStatus(id, {
+        status: newStatus,
+        trackingNumber: trackingNumber || undefined,
+        overrideReason: overrideReason.trim() || undefined,
+      });
       toast.success('Status updated');
       setStatusDialog(false);
+      setOverrideReason('');
       setOrder((o: any) => ({ ...o, status: newStatus, trackingNumber }));
-    } catch {
-      toast.error('Update failed');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Update failed');
     } finally {
       setUpdating(false);
     }
@@ -217,6 +226,17 @@ export default function OrderDetailAdminPage() {
               </Box>
             </CardContent>
           </Card>
+
+          {/* Delivery confirmation — only for parcels we carry ourselves */}
+          <DeliveryOtpCard
+            orderId={id}
+            order={order}
+            onDelivered={(updated) => {
+              setOrder((o: any) => ({ ...o, ...updated }));
+              setNewStatus('DELIVERED');
+              if (updated?.codCollected != null) setCodCollected(String(updated.codCollected));
+            }}
+          />
 
           {/* Delivery method */}
           <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, mb: 3 }}>
@@ -454,6 +474,24 @@ export default function OrderDetailAdminPage() {
           </TextField>
           <TextField label="Tracking Number (optional)" size="small" fullWidth
             value={trackingNumber} onChange={e => setTrackingNumber(e.target.value)} />
+
+          {/* Closing a self-delivery without the customer's code is possible,
+              but it has to be a deliberate, explained act. */}
+          {newStatus === 'DELIVERED'
+            && order?.fulfilmentType === 'SELF'
+            && !order?.deliveryOtpVerifiedAt && (
+            <>
+              <Alert severity="warning" sx={{ py: 0.5 }}>
+                No delivery code has been confirmed for this order. Use the Delivery
+                Confirmation card instead — it is the proof the parcel was handed over.
+              </Alert>
+              <TextField label="Reason for closing it without a code" size="small" fullWidth
+                multiline rows={2} value={overrideReason}
+                onChange={e => setOverrideReason(e.target.value)}
+                placeholder="e.g. customer has no email, confirmed on call with the rider"
+                helperText="Saved on the order. Only a full admin can do this." />
+            </>
+          )}
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setStatusDialog(false)}>Cancel</Button>

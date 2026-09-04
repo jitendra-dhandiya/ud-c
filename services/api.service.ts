@@ -102,6 +102,12 @@ export const orderApi = {
   getAll: (params?: Record<string, unknown>) => api.get('/orders', { params }),
   updateStatus: (id: string, data: object) => api.put(`/orders/${id}/status`, data),
   updateFulfilment: (id: string, data: object) => api.put(`/orders/${id}/fulfilment`, data),
+  // Delivery OTP. The code is never in any of these responses — the office
+  // gets it from the customer, over the phone.
+  getDeliveryOtp: (id: string) => api.get(`/orders/${id}/delivery-otp`),
+  sendDeliveryOtp: (id: string) => api.post(`/orders/${id}/delivery-otp/send`),
+  verifyDeliveryOtp: (id: string, data: { otp: string; codCollected?: number | null }) =>
+    api.post(`/orders/${id}/delivery-otp/verify`, data),
 };
 
 // ─── Payments ─────────────────────────────────────────────────
