@@ -9,6 +9,12 @@ export const authApi = {
     api.post<{ data: LoginResponse }>('/auth/login', { email, password }),
   googleLogin: (token: string) =>
     api.post<{ data: LoginResponse }>('/auth/google', { token }),
+  // Email verification. Registration no longer returns tokens — verifying the
+  // code is what signs the customer in.
+  verifyEmail: (email: string, otp: string) =>
+    api.post<{ data: LoginResponse }>('/auth/verify-email', { email, otp }),
+  resendVerification: (email: string) =>
+    api.post('/auth/resend-verification', { email }),
   logout: () => api.post('/auth/logout'),
   refresh: (refreshToken: string) =>
     api.post<{ data: { accessToken: string; refreshToken: string } }>('/auth/refresh', { refreshToken }),
