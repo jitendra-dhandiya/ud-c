@@ -19,8 +19,10 @@ export default function CartPage() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [appliedCoupon, setAppliedCoupon] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
+  const [freeShipping, setFreeShipping] = useState(false);
 
-  const shippingCharge = subtotal < FREE_SHIPPING_THRESHOLD ? SHIPPING_CHARGE : 0;
+  const baseShipping = subtotal < FREE_SHIPPING_THRESHOLD ? SHIPPING_CHARGE : 0;
+  const shippingCharge = freeShipping ? 0 : baseShipping;
   const total = subtotal - couponDiscount + shippingCharge;
 
   const applyCoupon = async () => {
@@ -28,9 +30,18 @@ export default function CartPage() {
     setCouponLoading(true);
     try {
       const { data } = await cartApi.applyCoupon(couponCode, subtotal);
-      setCouponDiscount(data.data.discountAmount);
-      setAppliedCoupon(couponCode);
-      toast.success(`Coupon applied! You save ${formatPrice(data.data.discountAmount)}`);
+      const d = (data as any).data;
+      const amount = Number(d.discountAmount) || 0;
+      setCouponDiscount(amount);
+      setFreeShipping(Boolean(d.freeShipping));
+      setAppliedCoupon(couponCode.trim().toUpperCase());
+      // A free-delivery coupon takes nothing off the goods, so reporting the
+      // discount would announce a saving of zero on a coupon that works.
+      toast.success(
+        d.freeShipping
+          ? 'Free delivery applied'
+          : `Coupon applied! You save ${formatPrice(amount)}`,
+      );
     } catch (e: any) {
       toast.error(e?.response?.data?.message || 'Invalid coupon');
     } finally {
@@ -135,7 +146,7 @@ export default function CartPage() {
                 <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Have a coupon?</Typography>
                 {appliedCoupon ? (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip label={`${appliedCoupon} applied`} color="success" size="small" onDelete={() => { setAppliedCoupon(''); setCouponDiscount(0); setCouponCode(''); }} />
+                    <Chip label={`${appliedCoupon} applied`} color="success" size="small" onDelete={() => { setAppliedCoupon(''); setCouponDiscount(0); setFreeShipping(false); setCouponCode(''); }} />
                   </Box>
                 ) : (
                   <Box sx={{ display: 'flex', gap: 1 }}>

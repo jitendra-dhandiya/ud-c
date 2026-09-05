@@ -14,7 +14,7 @@ import {
 import { Formik, Form, Field } from 'formik';
 import * as Yup from 'yup';
 import { useCart } from '../../../hooks/useCart';
-import { orderApi, paymentApi, userApi } from '../../../services/api.service';
+import { orderApi, paymentApi, userApi, cartApi } from '../../../services/api.service';
 import { formatPrice } from '../../../utils/format';
 import { SHIPPING_METHODS, type ShippingMethodId } from '../../../constants';
 import { useAppSelector, useAppDispatch } from '../../../store';
@@ -57,13 +57,74 @@ export default function CheckoutPage() {
   const [payStatus,  setPayStatus]  = useState<PayStatus>('idle');
   const [successOrder, setSuccessOrder] = useState<{ orderNumber: string; orderId: string } | null>(null);
 
-  const couponDiscount = Number(searchParams.get('discount') || 0);
-  const couponCode     = searchParams.get('coupon') || undefined;
+  // Seeded from the cart page's link, but editable here too. The cart drawer
+  // sends people straight to /checkout, so for most customers this is the only
+  // place a coupon can be entered at all.
+  const [couponInput, setCouponInput] = useState('');
+  const [couponCode, setCouponCode] = useState<string | undefined>(
+    searchParams.get('coupon') || undefined,
+  );
+  const [couponDiscount, setCouponDiscount] = useState(Number(searchParams.get('discount') || 0));
+  const [freeShipping, setFreeShipping] = useState(false);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   // Resolve shipping charge from selected method
   const selectedShipping = SHIPPING_METHODS.find(m => m.id === shippingMethod)!;
-  const shippingCharge   = selectedShipping.charge;
+  const shippingCharge   = freeShipping ? 0 : selectedShipping.charge;
   const total            = subtotal - couponDiscount + shippingCharge;
+
+  const applyCoupon = async () => {
+    const code = couponInput.trim();
+    if (!code) return;
+    setCouponLoading(true);
+    try {
+      const { data } = await cartApi.applyCoupon(code, subtotal);
+      const d = (data as any).data;
+      setCouponDiscount(Number(d.discountAmount) || 0);
+      setFreeShipping(Boolean(d.freeShipping));
+      setCouponCode(code);
+      setCouponInput('');
+      toast.success(
+        d.freeShipping
+          ? 'Free delivery applied'
+          : `Coupon applied — you save ${formatPrice(Number(d.discountAmount) || 0)}`,
+      );
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'That coupon could not be applied');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setCouponCode(undefined);
+    setCouponDiscount(0);
+    setFreeShipping(false);
+    setCouponInput('');
+  };
+
+  // A coupon with a minimum order stops qualifying if items are removed while
+  // the customer is on this page, so it is re-checked whenever the subtotal
+  // moves rather than trusting what the cart page decided earlier.
+  useEffect(() => {
+    if (!couponCode || subtotal <= 0) return;
+    let cancelled = false;
+    cartApi.applyCoupon(couponCode, subtotal)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const d = (data as any).data;
+        setCouponDiscount(Number(d.discountAmount) || 0);
+        setFreeShipping(Boolean(d.freeShipping));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCouponCode(undefined);
+        setCouponDiscount(0);
+        setFreeShipping(false);
+        toast.error('Your coupon no longer applies to this cart');
+      });
+    return () => { cancelled = true; };
+  }, [subtotal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When COD shipping is chosen, payment is always COD. When switching away, default to Cashfree.
   useEffect(() => {
@@ -579,6 +640,43 @@ export default function CheckoutPage() {
 
                 <Divider sx={{ my: 2 }} />
 
+                {/* Coupon. The cart drawer skips /cart entirely, so without
+                    this most customers never see a place to enter one. */}
+                <Box sx={{ mb: 2 }}>
+                  {couponCode ? (
+                    <Box sx={{
+                      display: 'flex', alignItems: 'center', gap: 1,
+                      bgcolor: '#f1f8f1', border: '1px solid #cfe6cf',
+                      borderRadius: 1, px: 1.5, py: 1,
+                    }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: '#1b5e20', flexGrow: 1 }}>
+                        {couponCode.toUpperCase()} applied
+                      </Typography>
+                      <Button size="small" onClick={removeCoupon}
+                        sx={{ minWidth: 'auto', color: 'text.secondary', textTransform: 'none' }}>
+                        Remove
+                      </Button>
+                    </Box>
+                  ) : (
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <TextField
+                        size="small" fullWidth placeholder="Coupon code"
+                        value={couponInput}
+                        onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } }}
+                        inputProps={{ style: { textTransform: 'uppercase' } }}
+                      />
+                      <Button
+                        variant="outlined" onClick={applyCoupon}
+                        disabled={couponLoading || !couponInput.trim()}
+                        sx={{ borderColor: '#1a1a1a', color: '#1a1a1a', px: 2, whiteSpace: 'nowrap' }}
+                      >
+                        {couponLoading ? '…' : 'Apply'}
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+
                 <Stack spacing={1} sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2" color="text.secondary">Subtotal</Typography>
@@ -600,7 +698,11 @@ export default function CheckoutPage() {
                         {selectedShipping.label}
                       </Typography>
                     </Box>
-                    <Typography variant="body2" fontWeight={600}>{formatPrice(shippingCharge)}</Typography>
+                    {freeShipping ? (
+                      <Typography variant="body2" fontWeight={700} color="success.main">FREE</Typography>
+                    ) : (
+                      <Typography variant="body2" fontWeight={600}>{formatPrice(shippingCharge)}</Typography>
+                    )}
                   </Box>
                   <Divider />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
