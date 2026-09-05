@@ -29,11 +29,24 @@ import { API_URL } from './constants';
  * named in the map.
  */
 export const config = {
-  // One segment only. Nothing else on the site is touched by this file.
-  matcher: '/category/:slug',
+  // Only these paths reach this file. Nothing else on the site is touched.
+  matcher: ['/category/:slug', '/wishlist'],
 };
 
 export async function middleware(req: NextRequest) {
+  // The wishlist used to live at /wishlist while every link in the site
+  // chrome pointed at /account/wishlist, so the page existed and nothing
+  // could reach it. It now lives with the rest of the account, and the old
+  // path forwards for anyone who bookmarked it.
+  //
+  // Here rather than in a page for the same reason as the category rule
+  // below: a redirect returned from a page comes back 200 with no Location.
+  if (req.nextUrl.pathname === '/wishlist') {
+    const url = req.nextUrl.clone();
+    url.pathname = '/account/wishlist';
+    return NextResponse.redirect(url, 301);
+  }
+
   const slug = req.nextUrl.pathname.split('/')[2] ?? '';
   const moved = legacyCategoryTarget(slug);
   if (!moved) return NextResponse.next();

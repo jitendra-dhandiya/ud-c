@@ -16,12 +16,26 @@ import toast from 'react-hot-toast';
 interface ProductCardProps {
   product: Product;
   variant?: 'default' | 'compact';
+  /**
+   * Seeds the heart when the caller already knows the answer — the wishlist
+   * page, where every tile is by definition saved. Without it the hearts there
+   * render empty, which reads as "not saved" on the one screen where
+   * everything is.
+   */
+  initialInWishlist?: boolean;
+  /** Told when the heart is toggled, so a wishlist page can drop the tile. */
+  onWishlistChange?: (inWishlist: boolean) => void;
 }
 
-export default function ProductCard({ product, variant = 'default' }: ProductCardProps) {
+export default function ProductCard({
+  product,
+  variant = 'default',
+  initialInWishlist = false,
+  onWishlistChange,
+}: ProductCardProps) {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAppSelector((s) => s.auth);
-  const [inWishlist, setInWishlist] = useState(false);
+  const [inWishlist, setInWishlist] = useState(initialInWishlist);
   const [hovered, setHovered] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   // On touch devices mouseenter fires during scroll — guard against it.
@@ -42,6 +56,7 @@ export default function ProductCard({ product, variant = 'default' }: ProductCar
     try {
       const { data } = await wishlistApi.toggle(product.id);
       setInWishlist(data.data.inWishlist);
+      onWishlistChange?.(data.data.inWishlist);
       toast.success(data.data.inWishlist ? 'Added to wishlist' : 'Removed from wishlist');
     } catch {}
   };
