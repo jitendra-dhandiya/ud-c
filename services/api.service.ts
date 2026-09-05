@@ -141,6 +141,18 @@ export const wishlistApi = {
   check: (productId: string) => api.get(`/wishlist/check/${productId}`),
 };
 
+// ─── Returns ──────────────────────────────────────────────────
+// Customers can read their own; only the office can record or change one,
+// because returns are raised on Instagram per the published policy.
+export const returnApi = {
+  getMyReturns: () => api.get('/returns/my'),
+  // Admin
+  getAll: (params?: Record<string, unknown>) => api.get('/returns', { params }),
+  create: (data: object) => api.post('/returns', data),
+  update: (id: string, data: object) => api.put(`/returns/${id}`, data),
+  remove: (id: string) => api.delete(`/returns/${id}`),
+};
+
 // ─── Users ────────────────────────────────────────────────────
 export const userApi = {
   updateProfile: (data: FormData) =>

@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import {
   Dashboard, Inventory2, Category, ShoppingCart, People,
-  BarChart, Settings, Image, Article, LocalOffer, Star,
+  BarChart, Settings, Image, Article, LocalOffer, Star, Replay,
   ExpandLess, ExpandMore, Menu as MenuIcon, ChevronLeft,
   Web, Collections, Tune, Policy, Logout, Person,
   ManageAccounts, AttachMoney, Search, LocalShipping,
@@ -49,6 +49,7 @@ const NAV_ITEMS = [
   },
   { label: 'Coupons', icon: <LocalOffer fontSize="small" />, href: '/admin/coupons' },
   { label: 'Reviews', icon: <Star fontSize="small" />, href: '/admin/reviews' },
+  { label: 'Returns', icon: <Replay fontSize="small" />, href: '/admin/returns' },
   {
     label: 'Shipping',
     icon: <LocalShipping fontSize="small" />,
