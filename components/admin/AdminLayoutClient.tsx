@@ -97,7 +97,9 @@ export default function AdminLayoutClient({ children }: Props) {
   useEffect(() => {
     if (!user) return;
     if (!isAdmin && user.role !== 'SUB_ADMIN') {
-      router.push('/');
+      // Not "/" — the customer sign-in has no password field, so a signed-out
+      // admin sent there has no way back in.
+      router.push('/admin-login');
     }
   }, [user, isAdmin, router]);
 
