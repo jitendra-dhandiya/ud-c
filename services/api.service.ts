@@ -286,6 +286,10 @@ export const analyticsApi = {
   getDashboard: () => api.get('/analytics/dashboard'),
   getRevenue: (params?: Record<string, unknown>) =>
     api.get('/analytics/revenue', { params }),
+  // Successful collections only — see the controller for why this is not the
+  // same number as revenue.
+  getTransactions: (params?: Record<string, unknown>) =>
+    api.get('/analytics/transactions', { params }),
 };
 
 // ─── Settings ─────────────────────────────────────────────────
