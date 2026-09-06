@@ -11,7 +11,47 @@ export const useAuth = () => {
   const router   = useRouter();
   const { user, isAuthenticated, isLoading } = useAppSelector((s) => s.auth);
 
-  // login — no automatic redirect; caller decides what to do on success
+  /**
+   * Ask for a sign-in code. The same call covers a returning customer and a
+   * brand-new one — the server answers which, so the UI never has to ask
+   * "do you have an account?".
+   */
+  const requestOtp = useCallback(async (data: {
+    email: string; firstName?: string; lastName?: string; phone?: string;
+  }) => {
+    dispatch(setLoading(true));
+    try {
+      const { data: res } = await authApi.requestOtp(data);
+      return (res as any).data as { isNewUser: boolean; expiresAt: string; resendAvailableAt: string };
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Could not send the code');
+      throw e;
+    } finally {
+      dispatch(setLoading(false));
+    }
+  }, [dispatch]);
+
+  /** The code is the sign-in, and for a new address it creates the account. */
+  const verifyOtp = useCallback(async (email: string, otp: string, onSuccess?: () => void) => {
+    dispatch(setLoading(true));
+    try {
+      const { data } = await authApi.verifyOtp(email, otp);
+      dispatch(setCredentials((data as any).data));
+      toast.success('Welcome!');
+      onSuccess?.();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'That code could not be verified');
+      throw e;
+    } finally {
+      dispatch(setLoading(false));
+    }
+  }, [dispatch]);
+
+  /**
+   * Password sign-in. No longer offered to customers, but kept because the
+   * shop's only admin account is on a domain with no inbox — a code sent there
+   * would bounce, and removing this would lock the panel.
+   */
   const login = useCallback(async (email: string, password: string, onSuccess?: () => void) => {
     dispatch(setLoading(true));
     try {
@@ -20,58 +60,7 @@ export const useAuth = () => {
       toast.success('Welcome back!');
       onSuccess?.();
     } catch (e: any) {
-      // An account that was never verified is not a failed login — the
-      // customer knows their password, they just never finished signing up.
-      // Send them to the code screen instead of a dead end.
-      if (e?.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
-        const pending = e.response.data.email || email;
-        toast('Verify your email to continue', { icon: '✉️' });
-        try { await authApi.resendVerification(pending); } catch {}
-        router.push(`/verify-email?email=${encodeURIComponent(pending)}`);
-        throw e;
-      }
       toast.error(e?.response?.data?.message || 'Login failed');
-      throw e; // re-throw so the caller can handle it
-    } finally {
-      dispatch(setLoading(false));
-    }
-  }, [dispatch, router]);
-
-  // register — no automatic redirect; caller decides what to do on success
-  const register = useCallback(async (formData: object, onSuccess?: () => void) => {
-    dispatch(setLoading(true));
-    try {
-      const { data } = await authApi.register(formData as any);
-      const result = data.data as any;
-
-      // Sign-up does not sign anyone in any more: the emailed code does.
-      if (result?.requiresVerification) {
-        toast.success('Check your email for the verification code');
-        router.push(`/verify-email?email=${encodeURIComponent(result.user.email)}`);
-        return;
-      }
-
-      dispatch(setCredentials(result));
-      toast.success('Account created successfully!');
-      onSuccess?.();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Registration failed');
-      throw e;
-    } finally {
-      dispatch(setLoading(false));
-    }
-  }, [dispatch, router]);
-
-  /** The code is what signs them in, so this ends with real credentials. */
-  const verifyEmail = useCallback(async (email: string, otp: string, onSuccess?: () => void) => {
-    dispatch(setLoading(true));
-    try {
-      const { data } = await authApi.verifyEmail(email, otp);
-      dispatch(setCredentials(data.data));
-      toast.success('Email verified — welcome!');
-      onSuccess?.();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Verification failed');
       throw e;
     } finally {
       dispatch(setLoading(false));
@@ -88,5 +77,5 @@ export const useAuth = () => {
   const isAdmin    = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
   const isSubAdmin = user?.role === 'SUB_ADMIN';
 
-  return { user, isAuthenticated, isLoading, isAdmin, isSubAdmin, login, register, verifyEmail, logout };
+  return { user, isAuthenticated, isLoading, isAdmin, isSubAdmin, login, requestOtp, verifyOtp, logout };
 };

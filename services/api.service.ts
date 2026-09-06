@@ -3,18 +3,18 @@ import type { Product, Category, Cart, Order, Blog, Review, Banner, HomepageSect
 
 // ─── Auth ──────────────────────────────────────────────────────
 export const authApi = {
-  register: (data: { firstName: string; lastName: string; email: string; password: string; phone?: string }) =>
-    api.post<{ data: LoginResponse }>('/auth/register', data),
   login: (email: string, password: string) =>
     api.post<{ data: LoginResponse }>('/auth/login', { email, password }),
   googleLogin: (token: string) =>
     api.post<{ data: LoginResponse }>('/auth/google', { token }),
-  // Email verification. Registration no longer returns tokens — verifying the
-  // code is what signs the customer in.
-  verifyEmail: (email: string, otp: string) =>
-    api.post<{ data: LoginResponse }>('/auth/verify-email', { email, otp }),
-  resendVerification: (email: string) =>
-    api.post('/auth/resend-verification', { email }),
+  // Passwordless. requestOtp both starts a sign-in and starts a sign-up; the
+  // server decides which, and verifyOtp is what actually issues tokens.
+  requestOtp: (data: { email: string; firstName?: string; lastName?: string; phone?: string }) =>
+    api.post<{ data: { isNewUser: boolean; expiresAt: string; resendAvailableAt: string } }>(
+      '/auth/otp/request', data,
+    ),
+  verifyOtp: (email: string, otp: string) =>
+    api.post<{ data: LoginResponse }>('/auth/otp/verify', { email, otp }),
   logout: () => api.post('/auth/logout'),
   refresh: (refreshToken: string) =>
     api.post<{ data: { accessToken: string; refreshToken: string } }>('/auth/refresh', { refreshToken }),
